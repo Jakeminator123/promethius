@@ -239,7 +239,7 @@ def run_single_fetch(date_str: str, url: str | None, db: str | None,
 def run_loop(start_date: str, url: str | None, db: str | None,
              sleep_s: int = 300, max_workers: int = 1,
              skip_scripts: list[str] | None = None, no_scripts: bool = False,
-             no_clean: bool = False) -> None:
+             no_clean: bool = False, in_thread: bool = False) -> None:
     # Smart första-deploy-detektion på Render
     if IS_RENDER and not no_clean:
         from utils.paths import POKER_DB, HEAVY_DB, DB_DIR
@@ -318,29 +318,33 @@ def run_loop(start_date: str, url: str | None, db: str | None,
 
     day = datetime.date.fromisoformat(start_date)
 
-    def signal_handler(signum: int, frame: Any) -> None:
-        if IS_RENDER and signum == signal.SIGTERM:
-            # På Render: Gör ordentlig cleanup innan vi avslutar
-            print(f"\n🛑 Fick SIGTERM på Render - gör ordentlig cleanup...")
-            
-            try:
-                # Stäng databas-connections
-                cleanup_database_locks()
-                print("✅ Databas-cleanup klar")
-            except:
-                pass
-            
-            print("✅ Graceful shutdown klar - avslutar")
-            sys.exit(0)
-        elif signum == signal.SIGTERM:
-            print(f"\n🛑 Fick SIGTERM - avslutar...")
-            sys.exit(0)
-        else:
-            print(f"\n🛑 Fick signal {signum} - stänger av gracefully...")
-            sys.exit(0)
+    # Signal handling bara i main thread, inte i scraping thread
+    if not in_thread:
+        def signal_handler(signum: int, frame: Any) -> None:
+            if IS_RENDER and signum == signal.SIGTERM:
+                # På Render: Gör ordentlig cleanup innan vi avslutar
+                print(f"\n🛑 Fick SIGTERM på Render - gör ordentlig cleanup...")
+                
+                try:
+                    # Stäng databas-connections
+                    cleanup_database_locks()
+                    print("✅ Databas-cleanup klar")
+                except:
+                    pass
+                
+                print("✅ Graceful shutdown klar - avslutar")
+                sys.exit(0)
+            elif signum == signal.SIGTERM:
+                print(f"\n🛑 Fick SIGTERM - avslutar...")
+                sys.exit(0)
+            else:
+                print(f"\n🛑 Fick signal {signum} - stänger av gracefully...")
+                sys.exit(0)
 
-    signal.signal(signal.SIGINT, signal_handler)
-    signal.signal(signal.SIGTERM, signal_handler)
+        signal.signal(signal.SIGINT, signal_handler)
+        signal.signal(signal.SIGTERM, signal_handler)
+    else:
+        print("🔄 Scraping-thread: Hoppar över signal handling (bara main thread)")
 
     batch_size = CFG.get("BATCH_SIZE", "500")
     print(f"🔄 Startar loop från {start_date}")
@@ -417,7 +421,8 @@ if __name__ == "__main__":
                 args.workers,
                 args.skip_scripts, 
                 args.no_scripts, 
-                args.no_clean
+                args.no_clean,
+                in_thread=True  # Viktigt: Säg att detta körs i thread!
             )
         
         # Starta scraping i bakgrund
@@ -468,5 +473,6 @@ if __name__ == "__main__":
             args.workers,
             args.skip_scripts, 
             args.no_scripts, 
-            args.no_clean
+            args.no_clean,
+            in_thread=False
         )
