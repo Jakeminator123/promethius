@@ -116,15 +116,39 @@ def parse_hand(h: Dict[str, Any],
 
     pos2name = {p: i.get("name") or i["stub"] for p, i in pos2info.items()}
     
-    # Normalisera stacks
-    stack0 = {p: int(normalize_amount(int(i["stack"]), chip_value)) 
-              for p, i in pos2info.items()}
+    # Normalisera stacks (hantera felaktiga format)
+    stack0 = {}
+    for p, i in pos2info.items():
+        stack_str = str(i["stack"])
+        # Hantera format som "0:83" genom att ta bort kolon
+        if ":" in stack_str:
+            stack_str = stack_str.replace(":", "")
+        try:
+            stack_val = int(stack_str)
+            stack0[p] = int(normalize_amount(stack_val, chip_value))
+        except ValueError:
+            # Om konvertering misslyckas, använd 0
+            print(f"⚠️  Kunde inte parsa stack '{i['stack']}' för position {p}")
+            stack0[p] = 0
     invested = {p: 0 for p in pos2info}
 
-    # Normalisera blinds och ante
-    bb = int(normalize_amount(h.get("big_blind_amount") or 0, chip_value))
-    sb = int(normalize_amount(h.get("small_blind_amount") or 0, chip_value))
-    ante = int(normalize_amount(h.get("ante_amount") or 0, chip_value))
+    # Normalisera blinds och ante (hantera felaktiga format)
+    def safe_parse_int(value, default=0):
+        """Säker parsing av int-värden som kan innehålla kolon"""
+        if value is None:
+            return default
+        val_str = str(value)
+        if ":" in val_str:
+            val_str = val_str.replace(":", "")
+        try:
+            return int(val_str)
+        except ValueError:
+            print(f"⚠️  Kunde inte parsa värde '{value}'")
+            return default
+    
+    bb = int(normalize_amount(safe_parse_int(h.get("big_blind_amount"), 0), chip_value))
+    sb = int(normalize_amount(safe_parse_int(h.get("small_blind_amount"), 0), chip_value))
+    ante = int(normalize_amount(safe_parse_int(h.get("ante_amount"), 0), chip_value))
 
     pot = sb + bb + ante * len(seats)
     if "SB" in invested: invested["SB"] += sb
@@ -165,11 +189,19 @@ def parse_hand(h: Dict[str, Any],
             state_next = state + tk
             pos, act = order[0], tk[0]
             
-            # Normalisera raise-belopp
+            # Normalisera raise-belopp (hantera felaktiga format)
             amt_to = 0
             if act == "r":
-                raw_amt = int(tk[1:])
-                amt_to = int(normalize_amount(raw_amt, chip_value))
+                amt_str = tk[1:]
+                # Hantera format som innehåller kolon
+                if ":" in amt_str:
+                    amt_str = amt_str.replace(":", "")
+                try:
+                    raw_amt = int(amt_str)
+                    amt_to = int(normalize_amount(raw_amt, chip_value))
+                except ValueError:
+                    print(f"⚠️  Kunde inte parsa raise amount '{tk[1:]}' i hand {h['stub']}")
+                    amt_to = cur_max  # Använd current max som fallback
 
             stack_b, pot_b = stack0[pos] - invested[pos], pot
             put = 0

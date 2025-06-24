@@ -214,8 +214,8 @@ function AdvancedComparison() {
   }
 
   const quickActionButtons = ['bet', 'checkraise', 'donk', 'cont', 'probe', 'lead', '2bet', '3bet']
-
-  return (
+    
+    return (
     <Box sx={{ p: { xs: 2, md: 3 } }}>
       {/* Hero Header */}
       <Box mb={6} textAlign="center">
@@ -255,7 +255,7 @@ function AdvancedComparison() {
             <PeopleIcon />
           </Avatar>
           <Typography variant="h5" sx={{ fontWeight: 600 }}>
-            Player Selection
+          Player Selection
           </Typography>
         </Box>
 
@@ -480,13 +480,13 @@ function AdvancedComparison() {
 
           <Grid item xs={12} sm={6} md={4}>
             <TextField
-              type="number"
+                type="number"
               fullWidth
               id="minJScore"
               name="minJScore"
               label="Min J-Score"
-              value={filters.min_j_score || ''}
-              onChange={(e) => handleFilterChange('min_j_score', e.target.value)}
+                value={filters.min_j_score || ''}
+                onChange={(e) => handleFilterChange('min_j_score', e.target.value)}
               size="small"
               inputProps={{ min: 0, max: 100 }}
             />
@@ -494,13 +494,13 @@ function AdvancedComparison() {
 
           <Grid item xs={12} sm={6} md={4}>
             <TextField
-              type="number"
+                type="number"
               fullWidth
               id="maxJScore"
               name="maxJScore"
               label="Max J-Score"
-              value={filters.max_j_score || ''}
-              onChange={(e) => handleFilterChange('max_j_score', e.target.value)}
+                value={filters.max_j_score || ''}
+                onChange={(e) => handleFilterChange('max_j_score', e.target.value)}
               size="small"
               inputProps={{ min: 0, max: 100 }}
             />
@@ -691,7 +691,7 @@ function AdvancedComparison() {
                     <Typography variant="h6" gutterBottom color="primary">
                       {selectedPlayer}
                     </Typography>
-                    {segmentData.player_stats.action_count > 0 ? (
+                {segmentData.player_stats.action_count > 0 ? (
                       <Box>
                         {[
                           ['Actions', segmentData.player_stats.action_count],
@@ -741,9 +741,9 @@ function AdvancedComparison() {
                 }}>
                   <CardContent>
                     <Typography variant="h6" gutterBottom color="secondary">
-                      Population Average
+                  Population Average
                     </Typography>
-                    {segmentData.population_stats.total_actions > 0 ? (
+                {segmentData.population_stats.total_actions > 0 ? (
                       <Box>
                         {[
                           ['Total Actions', segmentData.population_stats.total_actions],
@@ -819,8 +819,8 @@ function AdvancedComparison() {
                             fontWeight: 700
                           }}
                         >
-                          {segmentData.player_stats.avg_j_score > segmentData.population_stats.avg_j_score ? '+' : ''}
-                          {formatNumber(segmentData.player_stats.avg_j_score - segmentData.population_stats.avg_j_score)}
+                      {segmentData.player_stats.avg_j_score > segmentData.population_stats.avg_j_score ? '+' : ''}
+                      {formatNumber(segmentData.player_stats.avg_j_score - segmentData.population_stats.avg_j_score)}
                         </Typography>
                       </Box>
                     </Grid>
@@ -836,8 +836,8 @@ function AdvancedComparison() {
                             fontWeight: 700
                           }}
                         >
-                          {segmentData.player_stats.win_rate > segmentData.population_stats.avg_win_rate ? '+' : ''}
-                          {formatNumber(segmentData.player_stats.win_rate - segmentData.population_stats.avg_win_rate)}%
+                      {segmentData.player_stats.win_rate > segmentData.population_stats.avg_win_rate ? '+' : ''}
+                      {formatNumber(segmentData.player_stats.win_rate - segmentData.population_stats.avg_win_rate)}%
                         </Typography>
                       </Box>
                     </Grid>
@@ -933,12 +933,12 @@ function AdvancedComparison() {
                               fontWeight={600}
                               color={hand.money_won > 0 ? 'success.main' : 'error.main'}
                             >
-                              {hand.money_won > 0 ? '+' : ''}{formatNumber(hand.money_won)}
+                          {hand.money_won > 0 ? '+' : ''}{formatNumber(hand.money_won)}
                             </Typography>
                           </Grid>
                         </Grid>
                         
-                        {hand.holecards && (
+                    {hand.holecards && (
                           <Box mt={2}>
                             <Typography variant="caption" color="text.secondary">Cards: </Typography>
                             <Typography variant="body2" component="span" sx={{ fontFamily: 'monospace' }}>

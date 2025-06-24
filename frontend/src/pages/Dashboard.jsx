@@ -399,10 +399,10 @@ function Dashboard() {
           }}
         >
           Poker Analytics Dashboard
-        </Typography>
+      </Typography>
         <Typography variant="h6" color="text.secondary" sx={{ fontWeight: 400 }}>
           Overview of all players and their performance
-        </Typography>
+      </Typography>
       </Box>
 
       {/* Statistics cards */}
@@ -461,7 +461,7 @@ function Dashboard() {
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Ranked by number of hands played
-                </Typography>
+              </Typography>
               </Box>
               <IconButton 
                 onClick={() => setColumnDialogOpen(true)}
@@ -519,14 +519,14 @@ function Dashboard() {
                     ? 'Database Error'
                     : 'Loading player data...'}
                 </Typography>
-                <Typography variant="body2" color="text.secondary">
+              <Typography variant="body2" color="text.secondary">
                   {stats?.message || stats?.error_message || 'Scraping and processing poker hands. This may take a few minutes.'}
                 </Typography>
                 {stats?.database_status === 'building' && (
                   <Typography variant="caption" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
                     Status: Scraping data from API and running analysis scripts<br/>
                     This process can take 5-15 minutes for large datasets
-                  </Typography>
+              </Typography>
                 )}
               </Box>
             )}

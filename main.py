@@ -69,7 +69,7 @@ print()
 def run_clean_start(skip_on_render: bool = True) -> bool:
     # På Render, skippa rensning om inte explicit begärt
     if IS_RENDER and skip_on_render:
-        print("🚀 På Render - hoppar över rensning")
+        print("🚀 På Render - hoppar över rensning (använd skip_on_render=False för att tvinga)")
         return True
         
     try:
@@ -131,14 +131,31 @@ def run_loop(start_date: str, url: str | None, db: str | None,
              sleep_s: int = 300, max_workers: int = 1,
              skip_scripts: list[str] | None = None, no_scripts: bool = False,
              no_clean: bool = False) -> None:
-    # Kör endast rensning om --no-clean INTE är satt
-    if not no_clean and not run_clean_start():
+    # På Render, kör rensning vid första start om inte --no-clean
+    if IS_RENDER and not no_clean:
+        # Kolla om det är första körningen (databaser finns inte eller är tomma)
+        from utils.paths import POKER_DB, HEAVY_DB
+        first_run = not POKER_DB.exists() or POKER_DB.stat().st_size < 1000
+        
+        if first_run:
+            print("🧹 Första körningen på Render - rensar databaser...")
+            if not run_clean_start(skip_on_render=False):
+                print("❌ Kritisk: Kan inte starta utan lyckad första rensning")
+                sys.exit(1)
+        else:
+            print("♻️  Databaser finns redan - skippar rensning (kontinuerlig drift)")
+    elif not no_clean and not run_clean_start():
+        # Lokal miljö - respektera --no-clean flaggan
         print("❌ Kan inte fortsätta utan lyckad rensning")
         return
 
     day = datetime.date.fromisoformat(start_date)
 
     def signal_handler(signum: int, frame: Any) -> None:
+        if IS_RENDER and signum == signal.SIGTERM:
+            # På Render ignorerar vi SIGTERM för kontinuerlig drift
+            print(f"\n🛡️  Fick SIGTERM på Render - fortsätter köra (kontinuerlig drift)")
+            return
         print(f"\n🛑 Fick signal {signum} - stänger av gracefully...")
         sys.exit(0)
 
