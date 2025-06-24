@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # main.py – central startpunkt som först rensar och sedan startar scraping
+# På Render startar också webservern för att ha allt i en robust process
 
 from __future__ import annotations
 import argparse
@@ -10,6 +11,7 @@ import datetime
 import subprocess
 from pathlib import Path
 import signal
+import threading
 from typing import Any
 
 # Import centraliserad path-hantering
@@ -25,6 +27,26 @@ print(f"💾 Database: {POKER_DB}")
 
 os.chdir(ROOT)
 from scrape_hh import scrape  # type: ignore[reportMissingImports]  # noqa: E402
+
+def start_webserver_thread():
+    """Startar webservern i en separat thread (bara på Render)"""
+    if not IS_RENDER:
+        return
+        
+    print("🌐 Startar webserver-thread...")
+    
+    def run_webserver():
+        try:
+            subprocess.run([sys.executable, "start_server.py"])
+        except Exception as e:
+            print(f"❌ Webserver-thread krashade: {e}")
+    
+    web_thread = threading.Thread(target=run_webserver, daemon=True)
+    web_thread.start()
+    
+    # Vänta lite så webservern hinner starta
+    time.sleep(5)
+    print("✅ Webserver-thread startad")
 
 # ── 2. Hjälpfunktioner ──────────────────────────────────────────────────
 def load_config() -> dict[str, str]:
@@ -175,6 +197,12 @@ args = ap.parse_args()
 # ── 4. Kör vald handling ───────────────────────────────────────────────
 if __name__ == "__main__":
     print("🚀 Startar automatisk scraping...")
+    
+    # På Render, starta webservern först
+    if IS_RENDER:
+        start_webserver_thread()
+        print("🌐 Render: Webserver + Scraping i samma process för maximal stabilitet")
+    
     start = args.date or STARTING_DATE
     run_loop(
         start, 

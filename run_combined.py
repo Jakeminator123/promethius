@@ -102,7 +102,6 @@ def run_scraping_thread():
             "main.py", 
             "--no-clean",  # Skippa rensning för bättre prestanda
             "--sleep", sleep_time,
-            # Kör alla scripts första gången för att bygga heavy_analysis.db
         ])
     except Exception as e:
         print(f"❌ Scraping-thread krashade: {e}")
