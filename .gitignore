@@ -32,4 +32,8 @@ frontend/build/
 .DS_Store
 Thumbs.db
 
+# Project-specific
 local_data/
+scrape_hh/example/
+*.db-wal
+*.db-shm
