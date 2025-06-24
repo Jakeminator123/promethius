@@ -133,19 +133,24 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, signal_handler)
     signal.signal(signal.SIGTERM, signal_handler)
     
-    # Kolla om vi kör på Render
+    # Kolla om vi kör på Render - skippa alltid frontend build där
     is_render = os.environ.get("RENDER") == "true"
     
     if is_render:
-        print("🌐 Render deployment - frontend redan byggd")
-        print("🔄 Aktiverar kontinuerlig scraping på Render")
+        print("🌐 Render deployment - frontend byggd av buildCommand")
+        print("🚫 Skippar frontend build för att undvika dubbel-byggning")
     else:
-        print("💻 Lokal utveckling - bygger frontend")
-        # Bygg frontend bara för lokal utveckling
-        frontend_built = build_frontend()
-        if not frontend_built:
-            print("⚠️  Frontend build misslyckades, men fortsätter ändå...")
-            print("💡 API:et kommer fortfarande att fungera på /api/*")
+        # Lokal utveckling - kolla om frontend redan finns
+        frontend_dist_exists = (Path(__file__).parent / "frontend" / "dist").exists()
+        
+        if frontend_dist_exists:
+            print("📁 Frontend dist/ finns redan - skippar rebuild")
+        else:
+            print("💻 Lokal utveckling - bygger frontend")
+            frontend_built = build_frontend()
+            if not frontend_built:
+                print("⚠️  Frontend build misslyckades, men fortsätter ändå...")
+                print("💡 API:et kommer fortfarande att fungera på /api/*")
     
     # Starta scraping i en separat thread (nu även på Render!)
     print("🔄 Startar scraping-thread...")
