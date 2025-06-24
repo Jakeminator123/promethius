@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: prom
+    name: promethius
     env: python
     plan: pro
     buildCommand: pip install -r requirements.txt && cd frontend && rm -f package-lock.json && npm install && npm run build

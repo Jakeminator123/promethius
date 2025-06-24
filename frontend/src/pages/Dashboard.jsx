@@ -513,11 +513,21 @@ function Dashboard() {
               >
                 <CircularProgress sx={{ mb: 2 }} />
                 <Typography variant="h6" color="text.secondary">
-                  Loading player data...
+                  {stats?.database_status === 'building' 
+                    ? 'Building database...' 
+                    : stats?.database_status === 'error'
+                    ? 'Database Error'
+                    : 'Loading player data...'}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
-                  Check database connection if this takes too long.
+                  {stats?.message || stats?.error_message || 'Scraping and processing poker hands. This may take a few minutes.'}
                 </Typography>
+                {stats?.database_status === 'building' && (
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, textAlign: 'center' }}>
+                    Status: Scraping data from API and running analysis scripts<br/>
+                    This process can take 5-15 minutes for large datasets
+                  </Typography>
+                )}
               </Box>
             )}
           </Paper>

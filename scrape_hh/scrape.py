@@ -275,15 +275,83 @@ class Api:
         print(f"🔗 Hämtar från: {url}")
         print()
         
+        total_hands = 0
+        first_page = True
+        
         while url:
-            offset_match = re.search(r"offset=(\d+)", url)
-            if not offset_match:
+            try:
+                offset_match = re.search(r"offset=(\d+)", url)
+                if not offset_match:
+                    break
+                offset = int(offset_match.group(1))
+                
+                if first_page:
+                    print(f"   📡 API-anrop (första sidan)...", end=" ", flush=True)
+                else:
+                    print(f"   📡 API-anrop (offset {offset})...", end=" ", flush=True)
+                
+                response = self.s.get(url, timeout=60)
+                
+                # Kontrollera HTTP status
+                if response.status_code == 404:
+                    print(f"❌ Datum {date} hittades inte i API:et")
+                    print(f"   Episod '{epi}' existerar inte")
+                    print(f"   Prova ett tidigare datum som 2025-01-10")
+                    break
+                elif response.status_code != 200:
+                    print(f"❌ HTTP {response.status_code}")
+                    print(f"   Response: {response.text[:200]}...")
+                    break
+                
+                js = response.json()
+                results = js.get("results", [])
+                
+                if first_page:
+                    if not results:
+                        print(f"❌ Inga händer för {date}")
+                        print(f"   API svarade OK men episod '{epi}' är tom")
+                        print(f"   Datum kanske inte existerar än i systemet")
+                        break
+                    else:
+                        print(f"✅ {len(results)} händer hittade")
+                        first_page = False
+                else:
+                    print(f"✅ {len(results)} händer")
+                
+                for i, h in enumerate(results):
+                    yield offset + i, h
+                    total_hands += 1
+                    
+                url = js.get("next")
+                
+            except requests.exceptions.Timeout:
+                print(f"⏰ Timeout efter 60s på offset {offset}")
+                print(f"   API svarar för långsamt")
                 break
-            offset = int(offset_match.group(1))
-            js = self.s.get(url, timeout=60).json()
-            for i, h in enumerate(js["results"]):
-                yield offset + i, h                  # seq = offset + pos
-            url = js["next"]
+            except requests.exceptions.ConnectionError:
+                print(f"❌ Anslutningsfel till API")
+                print(f"   Kontrollera internetanslutning")
+                break
+            except requests.exceptions.RequestException as e:
+                print(f"❌ Nätverksfel: {e}")
+                break
+            except ValueError as e:
+                print(f"❌ JSON-parsing fel: {e}")
+                print(f"   API returnerade ogiltig data")
+                break
+            except Exception as e:
+                print(f"❌ Oväntat fel: {e}")
+                break
+        
+        if total_hands > 0:
+            print(f"🎉 Totalt hämtade {total_hands:,} händer för {date}")
+        else:
+            print(f"⚠️  Inga händer hämtades för {date}")
+            print(f"   Möjliga orsaker:")
+            print(f"   • Datum existerar inte än (du använder {date})")
+            print(f"   • API-credentials saknas/ogiltiga")
+            print(f"   • Nätverksproblem")
+            print(f"   • Coinpoker har ändrat API-struktur")
 
 # ────────────────────────────────────────────────────────────────
 # 5. databas-access
