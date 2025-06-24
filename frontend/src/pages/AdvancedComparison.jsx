@@ -268,6 +268,8 @@ function AdvancedComparison() {
             <TextField
               select
               fullWidth
+              id="selectedPlayer"
+              name="selectedPlayer"
               value={selectedPlayer}
               onChange={(e) => setSelectedPlayer(e.target.value)}
               variant="outlined"
@@ -297,6 +299,8 @@ function AdvancedComparison() {
             <TextField
               select
               fullWidth
+              id="comparisonPlayer"
+              name="comparisonPlayer"
               value={comparisonPlayer}
               onChange={(e) => setComparisonPlayer(e.target.value)}
               variant="outlined"
@@ -424,6 +428,8 @@ function AdvancedComparison() {
             <TextField
               select
               fullWidth
+              id="street"
+              name="street"
               label="Street"
               value={filters.street || ''}
               onChange={(e) => handleFilterChange('street', e.target.value)}
@@ -440,6 +446,8 @@ function AdvancedComparison() {
             <TextField
               select
               fullWidth
+              id="position"
+              name="position"
               label="Position"
               value={filters.position || ''}
               onChange={(e) => handleFilterChange('position', e.target.value)}
@@ -456,6 +464,8 @@ function AdvancedComparison() {
             <TextField
               select
               fullWidth
+              id="actionType"
+              name="actionType"
               label="Action Type"
               value={filters.action_label || ''}
               onChange={(e) => handleFilterChange('action_label', e.target.value)}
@@ -472,6 +482,8 @@ function AdvancedComparison() {
             <TextField
               type="number"
               fullWidth
+              id="minJScore"
+              name="minJScore"
               label="Min J-Score"
               value={filters.min_j_score || ''}
               onChange={(e) => handleFilterChange('min_j_score', e.target.value)}
@@ -484,6 +496,8 @@ function AdvancedComparison() {
             <TextField
               type="number"
               fullWidth
+              id="maxJScore"
+              name="maxJScore"
               label="Max J-Score"
               value={filters.max_j_score || ''}
               onChange={(e) => handleFilterChange('max_j_score', e.target.value)}
@@ -496,6 +510,8 @@ function AdvancedComparison() {
             <TextField
               select
               fullWidth
+              id="potType"
+              name="potType"
               label="Pot Type"
               value={filters.pot_type || ''}
               onChange={(e) => handleFilterChange('pot_type', e.target.value)}
@@ -522,6 +538,8 @@ function AdvancedComparison() {
                 <TextField
                   select
                   fullWidth
+                  id="sizeCategory"
+                  name="sizeCategory"
                   label="Size Category"
                   value={filters.size_cat || ''}
                   onChange={(e) => handleFilterChange('size_cat', e.target.value)}
@@ -538,6 +556,8 @@ function AdvancedComparison() {
                 <TextField
                   select
                   fullWidth
+                  id="ipStatus"
+                  name="ipStatus"
                   label="IP Status"
                   value={filters.ip_status || ''}
                   onChange={(e) => handleFilterChange('ip_status', e.target.value)}
@@ -554,6 +574,8 @@ function AdvancedComparison() {
                 <TextField
                   select
                   fullWidth
+                  id="intention"
+                  name="intention"
                   label="Intention"
                   value={filters.intention || ''}
                   onChange={(e) => handleFilterChange('intention', e.target.value)}
