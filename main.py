@@ -157,98 +157,6 @@ def force_cleanup_on_start():
 os.chdir(ROOT)
 from scrape_hh import scrape  # type: ignore[reportMissingImports]  # noqa: E402
 
-def start_webserver_thread():
-    """Startar webservern i en separat thread (bara på Render)"""
-    if not IS_RENDER:
-        return
-        
-    print("🌐 Startar webserver-thread...")
-    
-    def run_webserver():
-        try:
-            # Ignorera SIGTERM i webserver-thread - låt main process hantera det
-            signal.signal(signal.SIGTERM, signal.SIG_IGN)
-            
-            # Skapa tomma databaser om de inte finns (på Render)
-            if IS_RENDER:
-                from utils.paths import POKER_DB, HEAVY_DB
-                import sqlite3
-                
-                # Skapa minimala databaser om de inte finns
-                for db_path in [POKER_DB, HEAVY_DB]:
-                    if not db_path.exists():
-                        print(f"📦 Skapar tom databas: {db_path}")
-                        # Se till att parent directory finns
-                        db_path.parent.mkdir(parents=True, exist_ok=True)
-                        conn = sqlite3.connect(str(db_path))
-                        conn.close()
-                
-                # Kontrollera frontend på Render
-                frontend_path = Path(__file__).resolve().parent / "frontend" / "dist"
-                if frontend_path.exists():
-                    index_file = frontend_path / "index.html"
-                    if index_file.exists():
-                        print(f"✅ Frontend byggd: {frontend_path}")
-                    else:
-                        print(f"❌ index.html saknas: {index_file}")
-                else:
-                    print(f"❌ Frontend dist saknas: {frontend_path}")
-                    print("⚠️  Frontend kanske inte byggdes korrekt i Build Command")
-            
-            # Importera direkt istället för subprocess
-            import uvicorn
-            
-            # Get port from environment variable (Render sets this) or default to 8000
-            port = int(os.environ.get("PORT", 8000))
-            print(f"🌐 Webserver startar på port {port}...")
-            print(f"🔗 URL: https://promethius.onrender.com")
-            
-            # Kontrollera om porten är upptagen
-            try:
-                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-                sock.settimeout(1)
-                result = sock.connect_ex(('localhost', port))
-                sock.close()
-                if result == 0:
-                    print(f"⚠️  Port {port} är upptagen - dödär processer som använder den")
-                    # Döda processer som använder vår port
-                    try:
-                        subprocess.run(f"lsof -ti:{port} | xargs kill -9", shell=True, capture_output=True)
-                    except:
-                        pass
-                    time.sleep(2)
-            except:
-                pass  # Ignore errors
-            
-            # Vänta lite så databaserna hinner skapas
-            time.sleep(2)
-            
-            # Kör uvicorn direkt i threaden
-            uvicorn.run(
-                "app:app",
-                host="0.0.0.0",
-                port=port,
-                reload=False,  # Aldrig reload på Render
-                log_level="info",
-                access_log=True
-            )
-        except Exception as e:
-            import traceback
-            print(f"❌ KRITISKT FEL - Webserver-thread krashade: {e}")
-            print(f"📋 Traceback: {traceback.format_exc()}")
-            print("🔄 Försöker starta om webserver om 30 sekunder...")
-            time.sleep(30)
-            # Rekursiv restart
-            run_webserver()
-    
-    web_thread = threading.Thread(target=run_webserver, daemon=False)  # INTE daemon!
-    web_thread.start()
-    
-    # Vänta längre så webservern hinner starta ordentligt  
-    print("⏱️  Väntar på att webserver ska starta...")
-    time.sleep(10)
-    print("✅ Webserver-thread startad")
-
 # ── 2. Hjälpfunktioner ──────────────────────────────────────────────────
 def load_config() -> dict[str, str]:
     kv: dict[str, str] = {}
@@ -492,32 +400,73 @@ if __name__ == "__main__":
     # TVÅNGSMÄSSIG CLEANUP FÖRST (på Render)
     force_cleanup_on_start()
     
-    # På Render, starta webservern först
+    # På Render, starta scraping i bakgrund och webserver som huvudprocess
     if IS_RENDER:
-        # Försök med threading först
-        try:
-            start_webserver_thread()
-            print("🌐 Render: Webserver + Scraping i samma process för maximal stabilitet")
-        except Exception as e:
-            print(f"❌ Threading misslyckades: {e}")
-            print("🔄 Startar webserver direkt istället...")
+        # Scraping i bakgrundsprocess istället för webserver i thread
+        def run_scraping_background():
+            """Kör scraping i bakgrundsprocess"""
+            print("🔄 Startar scraping i bakgrundsprocess...")
+            time.sleep(15)  # Vänta så webservern hinner starta först
             
-            # Backup: Starta webservern direkt utan scraping
-            import uvicorn
-            port = int(os.environ.get("PORT", 8000))
-            print(f"🌐 Backup: Startar webserver direkt på port {port}")
-            uvicorn.run("app:app", host="0.0.0.0", port=port, reload=False)
-            exit()  # Om vi når hit kördes aldrig scraping
-    
-    # Scraping-loop (körs bara om webserver startade i thread)
-    start = args.date or STARTING_DATE
-    run_loop(
-        start, 
-        args.url, 
-        args.db, 
-        args.sleep, 
-        args.workers,
-        args.skip_scripts, 
-        args.no_scripts, 
-        args.no_clean
-    )
+            start = args.date or STARTING_DATE
+            run_loop(
+                start, 
+                args.url, 
+                args.db, 
+                args.sleep, 
+                args.workers,
+                args.skip_scripts, 
+                args.no_scripts, 
+                args.no_clean
+            )
+        
+        # Starta scraping i bakgrund
+        import threading
+        scraping_thread = threading.Thread(target=run_scraping_background, daemon=True)
+        scraping_thread.start()
+        print("✅ Scraping startad i bakgrund")
+        
+        # Webserver som HUVUDPROCESS (det som Render övvakar)
+        print("🌐 Startar webserver som huvudprocess...")
+        import uvicorn
+        port = int(os.environ.get("PORT", 8000))
+        
+        # Skapa databaser först
+        try:
+            from utils.paths import POKER_DB, HEAVY_DB
+            import sqlite3
+            
+            for db_path in [POKER_DB, HEAVY_DB]:
+                if not db_path.exists():
+                    print(f"📦 Skapar tom databas: {db_path}")
+                    db_path.parent.mkdir(parents=True, exist_ok=True)
+                    conn = sqlite3.connect(str(db_path))
+                    conn.close()
+        except Exception as e:
+            print(f"⚠️  Databas-skapande fel: {e}")
+        
+        print(f"🌐 Webserver kör som huvudprocess på port {port}")
+        print(f"🔗 URL: https://promethius.onrender.com")
+        
+        # KÖR WEBSERVER SOM HUVUDPROCESS - inget threading!
+        uvicorn.run(
+            "app:app",
+            host="0.0.0.0",
+            port=port,
+            reload=False,
+            log_level="info",
+            access_log=True
+        )
+    else:
+        # Lokal utveckling - kör scraping direkt
+        start = args.date or STARTING_DATE
+        run_loop(
+            start, 
+            args.url, 
+            args.db, 
+            args.sleep, 
+            args.workers,
+            args.skip_scripts, 
+            args.no_scripts, 
+            args.no_clean
+        )
