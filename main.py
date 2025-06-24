@@ -37,7 +37,35 @@ def start_webserver_thread():
     
     def run_webserver():
         try:
-            subprocess.run([sys.executable, "start_server.py"])
+            # Skapa tomma databaser om de inte finns (på Render)
+            if IS_RENDER:
+                from utils.paths import POKER_DB, HEAVY_DB
+                import sqlite3
+                
+                # Skapa minimala databaser om de inte finns
+                for db_path in [POKER_DB, HEAVY_DB]:
+                    if not db_path.exists():
+                        print(f"📦 Skapar tom databas: {db_path}")
+                        # Se till att parent directory finns
+                        db_path.parent.mkdir(parents=True, exist_ok=True)
+                        conn = sqlite3.connect(str(db_path))
+                        conn.close()
+            
+            # Importera direkt istället för subprocess
+            import uvicorn
+            
+            # Get port from environment variable (Render sets this) or default to 8000
+            port = int(os.environ.get("PORT", 8000))
+            print(f"🌐 Webserver startar på port {port}...")
+            
+            # Kör uvicorn direkt i threaden
+            uvicorn.run(
+                "app:app",
+                host="0.0.0.0",
+                port=port,
+                reload=False,  # Aldrig reload på Render
+                log_level="info"
+            )
         except Exception as e:
             print(f"❌ Webserver-thread krashade: {e}")
     
