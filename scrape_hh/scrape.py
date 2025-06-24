@@ -109,11 +109,23 @@ def bulk_from_objects(con: sqlite3.Connection, hands: Iterable[dict[str, Any]]):
     ensure_schema(con)
     meta_rows, ps_rows = [], []
     for h in hands:
+        # Säker parsing för is_cash och is_mtt som kan innehålla kolon
+        def safe_parse_bool(value):
+            if value is None:
+                return 0
+            val_str = str(value)
+            if ":" in val_str:
+                val_str = val_str.replace(":", "")
+            try:
+                return int(val_str) if val_str.isdigit() else (1 if str(value).lower() in ['true', '1'] else 0)
+            except (ValueError, TypeError):
+                return 0
+        
         meta_rows.append((
             h["stub"],
             h["stub"][:10],
-            int(h.get("is_cash") or 0),
-            int(h.get("is_mtt")  or 0),
+            safe_parse_bool(h.get("is_cash")),
+            safe_parse_bool(h.get("is_mtt")),
             parse_blinds(h.get("blinds")),
             h.get("pot_type"),
             h.get("effective_stack"),

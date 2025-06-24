@@ -239,9 +239,21 @@ def parse_hand(h: Dict[str, Any],
          normalize_amount(pos2info[p].get("money_won") or 0, chip_value))
         for p in pos2info
     ]
+    # Säker parsing för is_mtt och is_cash
+    def safe_parse_bool(value):
+        if value is None:
+            return 0
+        val_str = str(value)
+        if ":" in val_str:
+            val_str = val_str.replace(":", "")
+        try:
+            return int(val_str) if val_str.isdigit() else (1 if str(value).lower() in ['true', '1'] else 0)
+        except (ValueError, TypeError):
+            return 0
+    
     hand_info = (
         h["stub"], hand_date, seq,
-        int(h.get("is_mtt") or 0), int(h.get("is_cash") or 0),
+        safe_parse_bool(h.get("is_mtt")), safe_parse_bool(h.get("is_cash")),
         bb, sb, ante, len(seats), h.get("pot_type")
     )
     return rows_s, rows_a, rows_p, hand_info, score_rows
