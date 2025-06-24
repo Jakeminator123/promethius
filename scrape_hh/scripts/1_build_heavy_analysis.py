@@ -28,6 +28,20 @@ from script_paths import ROOT, SRC_DB, DST_DB, CFG
 # Kolla om vi ska normalisera valutor
 NORMALIZE_CUR = CFG.get("NORMALIZE_CUR", "N").upper() == "Y"
 
+# Säker parsing-funktion för värden som kan innehålla kolon
+def safe_parse_int(value, default=0):
+    """Säker parsing av int-värden som kan innehålla kolon"""
+    if value is None:
+        return default
+    val_str = str(value)
+    if ":" in val_str:
+        val_str = val_str.replace(":", "")
+    try:
+        return int(val_str)
+    except ValueError:
+        print(f"⚠️  Kunde inte parsa värde '{value}'")
+        return default
+
 # Hantera kommandoradsargument
 ap = argparse.ArgumentParser()
 ap.add_argument("--src"); ap.add_argument("--dst")
@@ -120,31 +134,16 @@ def parse_hand(h: Dict[str, Any],
     stack0 = {}
     for p, i in pos2info.items():
         stack_str = str(i["stack"])
-        # Hantera format som "0:83" genom att ta bort kolon
-        if ":" in stack_str:
-            stack_str = stack_str.replace(":", "")
         try:
-            stack_val = int(stack_str)
+            stack_val = safe_parse_int(i["stack"], 0)
             stack0[p] = int(normalize_amount(stack_val, chip_value))
-        except ValueError:
+        except (ValueError, TypeError):
             # Om konvertering misslyckas, använd 0
             print(f"⚠️  Kunde inte parsa stack '{i['stack']}' för position {p}")
             stack0[p] = 0
     invested = {p: 0 for p in pos2info}
 
     # Normalisera blinds och ante (hantera felaktiga format)
-    def safe_parse_int(value, default=0):
-        """Säker parsing av int-värden som kan innehålla kolon"""
-        if value is None:
-            return default
-        val_str = str(value)
-        if ":" in val_str:
-            val_str = val_str.replace(":", "")
-        try:
-            return int(val_str)
-        except ValueError:
-            print(f"⚠️  Kunde inte parsa värde '{value}'")
-            return default
     
     bb = int(normalize_amount(safe_parse_int(h.get("big_blind_amount"), 0), chip_value))
     sb = int(normalize_amount(safe_parse_int(h.get("small_blind_amount"), 0), chip_value))
@@ -192,14 +191,10 @@ def parse_hand(h: Dict[str, Any],
             # Normalisera raise-belopp (hantera felaktiga format)
             amt_to = 0
             if act == "r":
-                amt_str = tk[1:]
-                # Hantera format som innehåller kolon
-                if ":" in amt_str:
-                    amt_str = amt_str.replace(":", "")
                 try:
-                    raw_amt = int(amt_str)
+                    raw_amt = safe_parse_int(tk[1:], cur_max)
                     amt_to = int(normalize_amount(raw_amt, chip_value))
-                except ValueError:
+                except (ValueError, TypeError):
                     print(f"⚠️  Kunde inte parsa raise amount '{tk[1:]}' i hand {h['stub']}")
                     amt_to = cur_max  # Använd current max som fallback
 

@@ -50,6 +50,18 @@ def start_webserver_thread():
                         db_path.parent.mkdir(parents=True, exist_ok=True)
                         conn = sqlite3.connect(str(db_path))
                         conn.close()
+                
+                # Kontrollera frontend på Render
+                frontend_path = Path(__file__).resolve().parent / "frontend" / "dist"
+                if frontend_path.exists():
+                    index_file = frontend_path / "index.html"
+                    if index_file.exists():
+                        print(f"✅ Frontend byggd: {frontend_path}")
+                    else:
+                        print(f"❌ index.html saknas: {index_file}")
+                else:
+                    print(f"❌ Frontend dist saknas: {frontend_path}")
+                    print("⚠️  Frontend kanske inte byggdes korrekt i Build Command")
             
             # Importera direkt istället för subprocess
             import uvicorn
@@ -57,6 +69,10 @@ def start_webserver_thread():
             # Get port from environment variable (Render sets this) or default to 8000
             port = int(os.environ.get("PORT", 8000))
             print(f"🌐 Webserver startar på port {port}...")
+            print(f"🔗 URL: https://promethius.onrender.com")
+            
+            # Vänta lite så databaserna hinner skapas
+            time.sleep(2)
             
             # Kör uvicorn direkt i threaden
             uvicorn.run(
@@ -64,16 +80,24 @@ def start_webserver_thread():
                 host="0.0.0.0",
                 port=port,
                 reload=False,  # Aldrig reload på Render
-                log_level="info"
+                log_level="info",
+                access_log=True
             )
         except Exception as e:
-            print(f"❌ Webserver-thread krashade: {e}")
+            import traceback
+            print(f"❌ KRITISKT FEL - Webserver-thread krashade: {e}")
+            print(f"📋 Traceback: {traceback.format_exc()}")
+            print("🔄 Försöker starta om webserver om 30 sekunder...")
+            time.sleep(30)
+            # Rekursiv restart
+            run_webserver()
     
-    web_thread = threading.Thread(target=run_webserver, daemon=True)
+    web_thread = threading.Thread(target=run_webserver, daemon=False)  # INTE daemon!
     web_thread.start()
     
-    # Vänta lite så webservern hinner starta
-    time.sleep(5)
+    # Vänta längre så webservern hinner starta ordentligt  
+    print("⏱️  Väntar på att webserver ska starta...")
+    time.sleep(10)
     print("✅ Webserver-thread startad")
 
 # ── 2. Hjälpfunktioner ──────────────────────────────────────────────────
@@ -159,19 +183,52 @@ def run_loop(start_date: str, url: str | None, db: str | None,
              sleep_s: int = 300, max_workers: int = 1,
              skip_scripts: list[str] | None = None, no_scripts: bool = False,
              no_clean: bool = False) -> None:
-    # På Render, kör rensning vid första start om inte --no-clean
+    # Smart första-deploy-detektion på Render
     if IS_RENDER and not no_clean:
-        # Kolla om det är första körningen (databaser finns inte eller är tomma)
-        from utils.paths import POKER_DB, HEAVY_DB
-        first_run = not POKER_DB.exists() or POKER_DB.stat().st_size < 1000
+        from utils.paths import POKER_DB, HEAVY_DB, DB_DIR
         
-        if first_run:
-            print("🧹 Första körningen på Render - rensar databaser...")
+        # Marker-fil för att veta om första deployen är gjord
+        marker_file = DB_DIR / ".first_deploy_done"
+        
+        if not marker_file.exists():
+            print("🎉 FÖRSTA DEPLOYEN - rensar alla databaser för fresh start...")
+            
+            # Lista över databasfiler att radera
+            db_files = [
+                POKER_DB,
+                HEAVY_DB,
+                # WAL och SHM filer
+                POKER_DB.with_suffix('.db-wal'),
+                POKER_DB.with_suffix('.db-shm'),
+                HEAVY_DB.with_suffix('.db-wal'),
+                HEAVY_DB.with_suffix('.db-shm'),
+            ]
+            
+            for db_file in db_files:
+                if db_file.exists():
+                    try:
+                        db_file.unlink()
+                        print(f"   ✓ Raderade {db_file.name}")
+                    except Exception as e:
+                        print(f"   ⚠️  Kunde inte radera {db_file.name}: {e}")
+            
+            # Kör full rensning
             if not run_clean_start(skip_on_render=False):
                 print("❌ Kritisk: Kan inte starta utan lyckad första rensning")
                 sys.exit(1)
+            
+            # Skapa marker-fil så vi vet att första deployen är gjord
+            marker_file.write_text(f"First deploy completed: {datetime.datetime.now().isoformat()}")
+            print("✅ Första deployen klar - framtida restarts behåller data")
+            
         else:
-            print("♻️  Databaser finns redan - skippar rensning (kontinuerlig drift)")
+            print("♻️  Inte första deployen - behåller befintlig data (kontinuerlig drift)")
+            # Läs när första deployen gjordes
+            try:
+                deploy_time = marker_file.read_text().strip()
+                print(f"   {deploy_time}")
+            except:
+                pass
     elif not no_clean and not run_clean_start():
         # Lokal miljö - respektera --no-clean flaggan
         print("❌ Kan inte fortsätta utan lyckad rensning")
@@ -199,7 +256,9 @@ def run_loop(start_date: str, url: str | None, db: str | None,
             current_date = day.isoformat()
 
             # Kör scraping synkront för att undvika extra processfork och sänka CPU-toppar
+            print(f"🔄 Startar scraping för {current_date}...")
             run_fetch_process(current_date, url, db, skip_scripts, no_scripts)
+            print(f"✅ Scraping klar för {current_date}")
 
             day += datetime.timedelta(days=1)
 
@@ -245,9 +304,22 @@ if __name__ == "__main__":
     
     # På Render, starta webservern först
     if IS_RENDER:
-        start_webserver_thread()
-        print("🌐 Render: Webserver + Scraping i samma process för maximal stabilitet")
+        # Försök med threading först
+        try:
+            start_webserver_thread()
+            print("🌐 Render: Webserver + Scraping i samma process för maximal stabilitet")
+        except Exception as e:
+            print(f"❌ Threading misslyckades: {e}")
+            print("🔄 Startar webserver direkt istället...")
+            
+            # Backup: Starta webservern direkt utan scraping
+            import uvicorn
+            port = int(os.environ.get("PORT", 8000))
+            print(f"🌐 Backup: Startar webserver direkt på port {port}")
+            uvicorn.run("app:app", host="0.0.0.0", port=port, reload=False)
+            exit()  # Om vi når hit kördes aldrig scraping
     
+    # Scraping-loop (körs bara om webserver startade i thread)
     start = args.date or STARTING_DATE
     run_loop(
         start, 
