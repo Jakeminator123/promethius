@@ -1,0 +1,274 @@
+Olika aspekter och skillnader:
+1. Small och Big Blind:
+
+Första fem händerna:
+
+Small Blind (250), Big Blind (500), inga antes.
+
+Blinds påverkar hur satsningarna definieras (r1250 motsvarar alltså 2,5 Big Blinds osv).
+
+Sista handen:
+
+Small Blind (500,000), Big Blind (1,000,000), inga antes.
+
+Stora summor leder till att bets är i miljoner, t.ex. r3000000 är ett raise på 3 Big Blinds.
+
+Notera skillnaden i "WALK"-handen ("pot_type": "WALK"), där ingen action tas (alla foldar till Big Blind). Då påverkas inte potten förutom Small Blind-värdet som Big Blind vinner automatiskt.
+
+2. Pottyp:
+
+SRP (Single Raised Pot):
+
+Vanligt när det endast är ett raise innan floppen (majoriteten av händerna).
+
+3BP (3-bet Pot):
+
+Handen "stub": "Hand249277314" där BTN raisar och BB gör en ytterligare höjning (3-bet).
+
+WALK:
+
+Alla foldar fram till BB (ingen postflop).
+
+3. chip_value_in_displayed_currency:
+
+Första fem händerna: värdet är 1, vilket betyder att varje marker representerar exakt 1 enhet (troligen turneringsmarker).
+
+Sista handen: värdet är 0.0005, vilket innebär att markerna representerar ett mycket lägre värde i faktisk valuta, vilket påverkar den reella ekonomiska betydelsen av varje action.
+
+Detta påverkar:
+
+Faktisk storlek på potten i pengar.
+
+Hur värdet för varje beslut beräknas i faktiska pengar (inte bara marker).
+
+4. Potstorlek och "breadcrumb":
+
+Breadcrumb (action-sekvensen) visar tydligt vilka insatser som gjorts:
+
+Exempel "r1250c" visar att Big Blind synar initial raise.
+
+I sista handen "ffffr3000000c" har fyra spelare foldat, sedan raisar SB till 3 miljoner, BB synar.
+
+Detta påverkar storleken på potten:
+
+Blinds och initiala bets blir grunden för senare satsningar.
+
+I en WALK blir det bara blinds i potten.
+
+5. Partial scores och difficulty (enbart sista handen har detta):
+
+Visar värderingar av beslutskvalitet (action_score) och svårighetsgrad (decision_difficulty).
+
+Saknas i övriga händer, vilket innebär att detaljerad analys ännu ej är gjord eller lagrad.
+
+Extra analys av hur blinds påverkar potstorlek:
+Potstorlek räknas alltid med blinds inkluderade. Ett raise är alltid ett värde utöver vad man redan har i potten från blind eller tidigare bets.
+
+I exempel: "BTN:62200:r1250" innebär att BTN först lägger 500 i potten från tidigare blinds och nu raisar med ytterligare 750.
+
+En "3-bet pot" innebär initial raise + ytterligare raise (vanligtvis BB). Då blir potten större tidigt, vilket påverkar postflop-actions och storleken på bets senare i handen.
+
+Sammanfattning av övriga viktiga skillnader:
+Community cards: vissa händer når inte ens flop (bara preflop), medan andra spelar hela vägen till river.
+
+In postflop: tydlig skillnad i vilka spelare som deltar efter floppen.
+
+Money won: varierar beroende på actions som skett och blinds i potten.
+
+Slutsats:
+Viktigaste olikheterna är chip_value_in_displayed_currency och hur blinds strukturerar potten.
+
+Sista handen skiljer sig markant i markerstorlek (1 marker = 0.0005), vilket drastiskt påverkar ekonomisk signifikans av varje beslut jämfört med de övriga händerna där marker är direkt representativa (1 marker = 1 enhet).
+
+Potstorleken påverkas alltid av blinds, men påverkan beror på pottyp och hur mycket action som skett.
+
+
+
+
+
+
+
+
+You said:
+Finns sätt att kunna göra så att alla värden faktist typ divideras med det värde/currency som d är skrina i? Kommer allt gå bra då.. Som du sade så är vissa i "1"-värde och andra i typ "0.0005" eller något. Min fråga kanske är såhär.. O mjag skulle iden hand där värdena är "0.0005" typ ta talla summor i den handen och vividera med den "currenyn". Skulle allt bli som i den me d"1"?
+
+
+ChatGPT said:
+Ja, du kan göra precis så:
+
+Exempel:
+
+Om du har "chip_value_in_displayed_currency": 0.0005, och du tar alla summor i handen (blinds, raises, bets osv.) och dividerar med detta värde, då normaliserar du handen så att varje hand får värdet 1 i chip_value_in_displayed_currency.
+
+Exempel på hur du gör det tydligt:
+python
+Copy
+Edit
+currency_factor = hand["chip_value_in_displayed_currency"]
+
+normalized_big_blind = hand["big_blind_amount"] / currency_factor
+normalized_small_blind = hand["small_blind_amount"] / currency_factor
+
+# Exempel på normalization av breadcrumb-summor:
+breadcrumb = "SB:145648000:r3000000,BB:204112000:c"
+normalized_breadcrumb = []
+for action in breadcrumb.split(","):
+    parts = action.split(":")
+    position = parts[0]
+    stack = int(parts[1]) / currency_factor
+    actions = parts[2:]
+
+    normalized_actions = []
+    for act in actions:
+        if act[0] in "rf":
+            if act[0] == "f":
+                normalized_actions.append(act)
+            else:
+                amount = int(act[1:]) / currency_factor
+                normalized_actions.append(f"{act[0]}{int(amount)}")
+        else:
+            normalized_actions.append(act)
+
+    normalized_breadcrumb.append(f"{position}:{int(stack)}:{''.join(normalized_actions)}")
+
+print("Normalized breadcrumb:", ",".join(normalized_breadcrumb))
+Vad blir effekten?
+
+Alla händer blir jämförbara.
+
+Potstorlekar, blinds och bets hamnar i samma skala, så du kan jämföra situationer oavsett original chip-värde.
+
+Kommer det fungera perfekt?
+Ja, i princip allt kommer fungera bra:
+
+Det blir mycket enklare att analysera händer.
+
+Besluten och insatserna blir lättare att jämföra mellan olika spel och nivåer.
+
+Eventuella fallgropar:
+
+Kom ihåg att du måste normalisera alla relaterade värden: blinds, stacks, breadcrumb-actions, partial_scores (om summorna ingår där), osv.
+
+Kontrollera noga att du dividerar varje värde där summor anges med chip_value_in_displayed_currency.
+
+Gör du så, kommer alla händer med olika chip-värden bli enhetliga och direkt jämförbara.
+
+
+
+
+
+
+
+
+You said:
+List Hands – Django REST framework.html
+File
+kan du kontrollera om det finns andra skaersom också behövs göras? Detta är mycket viktigt att det blir rätt. Inland kan sk "partial_scores" so minehåler" "action_scores" komma mad.. Ska sama sak göras till dessa i en ehan eller inte.. FInns något som itne ska normaliseras?
+
+
+ChatGPT said:
+Här är en komplett checklista för att säkerställa att normaliseringen görs korrekt och att inga viktiga steg missas:
+
+✅ Normalisera dessa:
+Stacks (spelarnas start-stack och kvarvarande stack efter varje action)
+
+Blinds och antes (small_blind_amount, big_blind_amount, ante_amount)
+
+Alla satsningar i breadcrumb och situation_string
+
+money_won (hur mycket varje spelare vinner eller förlorar)
+
+effective_stack (om denna finns)
+
+Potstorlekar i partial_scores (om pot-relaterade siffror finns)
+
+Exempel för breadcrumb-normalisering:
+
+python
+Copy
+Edit
+normalized_stack = stack / currency_factor
+normalized_raise = raise_amount / currency_factor
+❌ Dessa behöver du INTE normalisera:
+Action Scores (partial_scores → action_score)
+Dessa värden är procentuella eller dimensionlösa och ska inte förändras.
+
+Decision Difficulty (partial_scores → decision_difficulty)
+Dessa värden är relativa och inte monetära.
+
+all_time_avg_score
+Dessa är historiska/genomsnittliga värden och inte kopplade direkt till chipvärdet.
+
+Chipvalörer (hålkort, community cards)
+Kortens valörer förändras inte.
+
+⚠️ Ytterligare saker att verifiera noggrant:
+Noggrannhet vid decimaler:
+Se till att divisionen är korrekt utförd, särskilt vid små värden som 0.0005.
+
+Komplett omvandling:
+Verifiera att samtliga summor som berörs av pengar/marker har justerats och inga undantag glömts.
+
+Pottyp och konsekvens:
+Kontrollera att pottyp (t.ex. 3BP, SRP, WALK) fortfarande stämmer efter normalisering. Dessa ska inte ändras.
+
+is_cash och is_mtt:
+Dessa fält är booleska och ändras inte.
+
+⚙️ Exempel på en helt säker funktion för normalisering:
+python
+Copy
+Edit
+def normalize_hand(hand):
+    factor = hand["chip_value_in_displayed_currency"]
+    if factor == 1:
+        return hand  # Ingen åtgärd krävs
+
+    normalized_hand = hand.copy()
+
+    # Normalisera stacks och blinds
+    normalized_hand["big_blind_amount"] /= factor
+    normalized_hand["small_blind_amount"] /= factor
+    normalized_hand["ante_amount"] /= factor if hand["ante_amount"] else 0
+    normalized_hand["effective_stack"] = (
+        hand["effective_stack"] / factor if hand["effective_stack"] else None
+    )
+
+    # Normalisera positioners stack och money_won
+    for pos in normalized_hand["positions"].values():
+        pos["stack"] /= factor
+        pos["money_won"] = (
+            pos["money_won"] / factor if pos["money_won"] else None
+        )
+
+    # Normalisera breadcrumb
+    breadcrumb_parts = []
+    for action in hand["breadcrumb"].split(","):
+        parts = action.split(":")
+        pos, stack = parts[0], int(parts[1]) / factor
+        actions = []
+        for act in parts[2:]:
+            if act[0] in "rf":
+                if act[0] == "f":
+                    actions.append("f")
+                else:
+                    amount = int(act[1:]) / factor
+                    actions.append(f"{act[0]}{int(amount)}")
+            else:
+                actions.append(act)
+        breadcrumb_parts.append(f"{pos}:{int(stack)}:{''.join(actions)}")
+    normalized_hand["breadcrumb"] = ",".join(breadcrumb_parts)
+
+    # situation_string kan behöva liknande hantering
+    # beroende på format
+
+    # Partial_scores påverkas INTE
+    return normalized_hand
+📌 Sammanfattande svar:
+Normalisera alla monetära/marker-relaterade summor.
+
+Rör inte procentuella eller dimensionlösa värden (action_scores, difficulty).
+
+Kontrollera noggrant att inget missas eller onödigt ändras.
+
+Då får du en säker och konsekvent hantering av alla händer oavsett valuta- eller chipvärde.

@@ -1,0 +1,49 @@
+{
+  "sizing_ranges": {
+    "tiny": [
+      0.0,
+      0.2
+    ],
+    "small": [
+      0.2,
+      0.35
+    ],
+    "medium": [
+      0.35,
+      0.55
+    ],
+    "big": [
+      0.55,
+      0.85
+    ],
+    "pot": [
+      0.85,
+      1.1
+    ],
+    "over": [
+      1.1,
+      1.75
+    ],
+    "huge": [
+      1.75,
+      999.0
+    ]
+  },
+  "strength_mappings": {
+    "low": {
+      "small": "light-squeeze",
+      "medium": "squeeze-bluff",
+      "large": "iso-squeeze"
+    },
+    "medium": {
+      "small": "value-squeeze",
+      "medium": "standard-squeeze",
+      "large": "strong-squeeze"
+    },
+    "high": {
+      "small": "premium-squeeze",
+      "medium": "value-squeeze",
+      "large": "premium-squeeze"
+    }
+  }
+} 

@@ -1,0 +1,33 @@
+
+Readme / Databasöversikt
+Tabeller och kolumner:
+
+Tabell: main
+
+player_id: spelarens id
+
+total_hands: antal händer spelade
+
+vpip, pfr: statistik per spelare
+
+avg_preflop_score, avg_postflop_score, m.fl.
+(Kan ha fler kolumner)
+
+Tabell: detailed_actions
+
+hand_id, player_id, position, street, action_type, action_label, amount
+
+hole_cards, community_cards, hand_strength, pot_before, money_won, net_win
+
+table_size, active_players_count, pot_type, stakes
+
+raise_percentage, bet_size_category, player_intention
+
+created_at
+(Alla finns med i SQL-exemplet ovan.)
+
+Syfte:
+
+Hämta statistik och utföra analys på spelar- och handnivå, samt möjliggöra bot-detektion.
+
+Funktionerna kan lätt återanvändas i egna analys-/ML-skript eller Dash-appar.

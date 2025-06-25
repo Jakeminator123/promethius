@@ -1,0 +1,237 @@
+# Action classification rules for poker hand analysis
+# ---------------------------------------------------
+# Varje regel utvärderas uppifrån och ner per gata.
+# Den första regeln vars villkor ('when') matchar används och dess
+# 'result' (eller 'result_template') returneras som action_label.
+# ---------------------------------------------------
+# 
+# Villkor som kan användas:
+# - current_token: "raise" eller "bet" 
+# - raise_count_gt: antal raises innan denna (ex: 1 betyder minst 2 raises)
+# - player_prev_actions_contains: spelaren har gjort denna action tidigare på gatan
+# - player_position: "IP" eller "OOP"
+# - is_preflop_aggressor: true/false
+# - first_bet_this_street: true/false
+# - prev_street_ended_with_two_checks: true/false
+# - prev_street_had_bet: true/false
+#
+# scope: PREFLOP, FLOP, TURN, RIVER, POSTFLOP (=flop+turn+river), ANY
+# result_template: använd {variabler} för dynamiska värden
+
+rules:
+  # -------------------------------------------------
+  # Pre-flop regler
+  # -------------------------------------------------
+  - id: open
+    priority: 5
+    scope: PREFLOP
+    description: "Första raise preflop = open"
+    when:
+      current_token: raise
+      raise_count: 0        # inga raises innan denna
+    result: open
+
+  - id: limp_raise
+    priority: 10
+    scope: PREFLOP            
+    description: "Spelaren har limpat (c) och höjer nu"
+    when:
+      current_token: raise    
+      player_prev_actions_contains: c
+    result: limp_raise
+
+  - id: 2bet_preflop
+    priority: 15
+    scope: PREFLOP
+    description: "Andra raise preflop = 2bet (isolering)"
+    when:
+      current_token: raise
+      raise_count: 1
+    result: 2bet
+    
+  - id: 3bet_preflop
+    priority: 20
+    scope: PREFLOP
+    description: "Tredje raise preflop = 3bet"
+    when:
+      current_token: raise
+      raise_count: 2
+    result: 3bet
+
+  - id: nbet_preflop
+    priority: 25
+    scope: PREFLOP
+    description: "4bet, 5bet, 6bet osv preflop"
+    when:
+      current_token: raise
+      raise_count_gt: 2       # 3 eller fler raises innan
+    result_template: "{raise_count_plus1}bet"
+
+  # -------------------------------------------------
+  # Post-flop regler (FLOP / TURN / RIVER)
+  # -------------------------------------------------
+  
+  # --- Checkraise ---
+  - id: checkraise
+    priority: 10
+    scope: POSTFLOP
+    description: "Spelaren checkade tidigare och höjer nu"
+    when:
+      current_token: raise
+      player_prev_actions_contains: x
+    result: checkraise
+
+  # --- Donk bet ---
+  - id: donk
+    priority: 20
+    scope: POSTFLOP
+    description: "OOP bet när förra gatan hade action"
+    when:
+      current_token: bet
+      player_position: OOP
+      prev_street_had_bet: true
+      first_bet_this_street: true
+    result: donk
+
+  # --- Continuation bet ---
+  - id: cont
+    priority: 30
+    scope: FLOP               
+    description: "Första bet på floppen av preflop aggressor"
+    when:
+      current_token: bet
+      is_preflop_aggressor: true
+      first_bet_this_street: true
+    result: cont
+
+  # --- Delayed c-bet ---
+  - id: delayed_cont
+    priority: 35
+    scope: TURN
+    description: "Preflop aggressor som checkade flop men betar turn"
+    when:
+      current_token: bet
+      is_preflop_aggressor: true
+      first_bet_this_street: true
+      prev_street_ended_with_two_checks: true
+    result: delayed_cont
+
+  # --- Lead bet ---
+  - id: lead
+    priority: 40
+    scope: POSTFLOP
+    description: "Första bet efter check-check på förra gatan"
+    when:
+      current_token: bet      
+      prev_street_ended_with_two_checks: true
+      first_bet_this_street: true
+    result: lead
+
+  # --- Probe bet ---
+  - id: probe
+    priority: 50
+    scope: POSTFLOP
+    description: "OOP bet när förra gatan inte hade bet (check-check)"
+    when:
+      current_token: bet
+      player_position: OOP
+      prev_street_had_bet: false
+      first_bet_this_street: true
+    result: probe
+
+  # --- Float bet ---
+  - id: float_bet
+    priority: 60
+    scope: POSTFLOP
+    description: "IP bet efter att ha callat förra gatan"
+    when:
+      current_token: bet
+      player_position: IP
+      first_bet_this_street: true
+    result: float_bet
+
+  # --- Standard bet ---
+  - id: bet
+    priority: 70
+    scope: POSTFLOP
+    description: "Standard bet (ingen speciell kategori)"
+    when:
+      current_token: bet
+      first_bet_this_street: true
+    result: bet
+
+  # --- 2bet postflop (första raise) ---
+  - id: 2bet_postflop
+    priority: 80
+    scope: POSTFLOP
+    description: "Första raise på gatan = 2bet"
+    when:
+      current_token: raise
+      raise_count: 1
+    result: 2bet
+
+  # --- 3bet postflop ---
+  - id: 3bet_postflop
+    priority: 90
+    scope: POSTFLOP
+    description: "Andra raise på gatan = 3bet"
+    when:
+      current_token: raise
+      raise_count: 2
+    result: 3bet
+
+  # --- 4bet+ postflop ---
+  - id: nbet_postflop
+    priority: 100
+    scope: POSTFLOP
+    description: "4bet, 5bet osv postflop"
+    when:
+      current_token: raise
+      raise_count_gt: 2
+    result_template: "{raise_count_plus1}bet"
+
+  # -------------------------------------------------
+  # Speciella situationer
+  # -------------------------------------------------
+  
+  # --- Squeeze ---
+  - id: squeeze
+    priority: 12
+    scope: PREFLOP
+    description: "3bet efter open + call(s)"
+    when:
+      current_token: raise
+      raise_count: 2
+      # TODO: lägg till villkor för att det fanns calls mellan
+    result: squeeze
+
+  # --- Block bet ---
+  - id: block
+    priority: 45
+    scope: RIVER
+    description: "Liten bet på river OOP"
+    when:
+      current_token: bet
+      player_position: OOP
+      first_bet_this_street: true
+      # TODO: lägg till storleksvillkor (ex: mindre än 50% pot)
+    result: block
+
+  # -------------------------------------------------
+  # Fallback - om ingen regel matchar
+  # -------------------------------------------------
+  - id: default_bet
+    priority: 9998
+    scope: ANY
+    description: "Standard bet om ingen regel matchar"
+    when: 
+      current_token: bet
+    result: bet
+    
+  - id: default_raise
+    priority: 9999
+    scope: ANY
+    description: "Standard raise om ingen regel matchar"
+    when: 
+      current_token: raise
+    result: raise 
