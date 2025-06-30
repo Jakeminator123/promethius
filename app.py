@@ -1,7 +1,7 @@
 # app.py - FastAPI backend för prom-projektet
 import os
 from pathlib import Path
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
@@ -30,7 +30,9 @@ from queries import (
     get_available_filters
 )
 # Import with alias to avoid naming conflict
+from queries.dashboard_queries import dash_summary_new, player_row_new, player_rows_new, top_players_new
 from queries.player_queries import get_player_detailed_stats as get_detailed_player_stats
+from queries.db_connection import execute_query
 
 # Setup logging
 logging.basicConfig(
@@ -124,10 +126,10 @@ async def get_dashboard_data():
     
     try:
         # Get main stats
-        summary = get_dashboard_summary()
+        summary = dash_summary_new()
         
         # Get top 25 players
-        top_players = get_top_players_table(25)
+        top_players = top_players_new(25)
         
         return {
             "total_players": summary.get('total_players', 0),
@@ -158,11 +160,80 @@ async def get_dashboard_data():
 async def get_players_for_comparison(search: str = "", limit: int = 50):
     """Get players for comparison from heavy_analysis.db"""
     try:
-        players = get_all_players_for_comparison(search, limit)
+        players = player_rows_new(search, limit)
         return {"players": players}
     except Exception as e:
         log.error(f"Error fetching players: {e}")
         return {"players": []}
+    
+@app.get("/api/players/new")
+async def list_players(
+    sort_by: str = Query("hands_played", description="Which column to sort by"),
+    order: str = Query("desc", regex="^(asc|desc)$", description="asc or desc"),
+    page: int = Query(1, ge=1, description="Page number (1-indexed)"),
+    limit: int = Query(25, ge=1, le=100, description="Rows per page"),
+):
+    """
+    Leaderboard of all players, sorted + paginated.
+    """
+
+    ALLOWED = {
+        "hands_played",        # ← human-friendly alias
+        "total_actions",
+        "vpip",
+        "pfr",
+        "avg_j_score",
+        "avg_preflop_score",
+        "avg_postflop_score",
+    }
+    if sort_by not in ALLOWED:
+        sort_by = "hands_played"
+
+    order_sql = "ASC" if order.lower() == "asc" else "DESC"
+    offset = (page - 1) * limit
+
+    # map human-friendly field → real SQL expression
+    if sort_by == "hands_played":
+        order_expr = "total_hands"                # real column
+    elif sort_by == "vpip":
+        order_expr = "ROUND(vpip_cnt*100.0/NULLIF(preflop_actions,0),1)"
+    elif sort_by == "pfr":
+        order_expr = "ROUND(pfr_cnt*100.0/NULLIF(preflop_actions,0),1)"
+    else:
+        order_expr = sort_by                      # column exists as-is
+
+    query = f"""
+        SELECT
+            player_id,
+            nickname,
+            total_hands AS hands_played,          -- expose as friendly name
+            total_actions,
+            avg_j_score,
+            ROUND(vpip_cnt*100.0/NULLIF(preflop_actions,0),1) AS vpip,
+            ROUND(pfr_cnt*100.0/NULLIF(preflop_actions,0),1) AS pfr,
+            avg_preflop_score,
+            avg_postflop_score
+        FROM player_summary
+        ORDER BY {order_expr} {order_sql}
+        LIMIT ? OFFSET ?
+    """
+
+    rows = execute_query(query, (limit, offset), db_name="heavy_analysis.db")
+
+    total = execute_query(
+        "SELECT COUNT(*) AS cnt FROM player_summary",
+        db_name="heavy_analysis.db"
+    )[0]["cnt"]
+
+    return {
+        "page": page,
+        "limit": limit,
+        "sort_by": sort_by,
+        "order": order_sql.lower(),
+        "total": total,
+        "players": rows,
+    }
+
 
 @app.get("/api/hand-history/search")
 async def search_hand_history(
@@ -194,12 +265,30 @@ async def search_hand_history(
 
 @app.get("/api/player/{player_id}/stats")
 async def get_player_stats_endpoint(player_id: str):
-    """Get basic stats for a specific player"""
+    """Get basic stats for a specific player."""
+    # 1) Try the materialized table first
+    row = player_row_new(player_id)
+    if row:
+        preflop_acts = row.get("preflop_actions", 0) or 0
+        vpip = round(row["vpip_cnt"] / preflop_acts * 100, 1) if preflop_acts else 0.0
+        pfr  = round(row["pfr_cnt"]  / preflop_acts * 100, 1) if preflop_acts else 0.0
+        return {
+            "player_id":          row["player_id"],
+            "nickname":           row["nickname"],
+            "hands_played":       row["total_hands"],
+            "total_actions":      row["total_actions"],
+            "avg_j_score":        round(row["avg_j_score"], 1) if row["avg_j_score"] is not None else 0.0,
+            "vpip":               vpip,
+            "pfr":                pfr,
+            "avg_preflop_score":  row.get("avg_preflop_score"),
+            "avg_postflop_score": row.get("avg_postflop_score"),
+        }
+
     try:
         stats = get_player_stats(player_id)
         return stats if stats else {"error": "Player not found"}
     except Exception as e:
-        log.error(f"Error fetching player stats: {e}")
+        log.error(f"Error fetching player stats fallback: {e}")
         return {"error": "Failed to fetch player stats"}
 
 @app.get("/api/compare-players")

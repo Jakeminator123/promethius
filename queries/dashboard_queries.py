@@ -269,3 +269,29 @@ def get_recent_activity() -> list:
     except Exception as e:
         log.error(f"Recent activity query failed: {e}")
         return [] 
+    
+
+# new queries for table materialization
+
+def dash_summary_new()      -> dict : return execute_query(
+    "SELECT * FROM dashboard_summary LIMIT 1",             db_name='heavy_analysis.db')[0]
+
+def top_players_new(limit=25)-> list : return execute_query(
+        "SELECT * FROM top25_players ORDER BY hands_played DESC LIMIT ?",
+        (limit,),                                             db_name='heavy_analysis.db')
+
+def player_row_new(pid:str)  -> dict|None:
+    rows = execute_query(
+        "SELECT * FROM player_summary WHERE player_id = ?", (pid,),
+        db_name='heavy_analysis.db')
+    return rows[0] if rows else None
+
+def player_rows_new(search:str="", limit:int=50)->list:
+    sql  = "SELECT * FROM player_summary WHERE 1"
+    args = []
+    if search:
+        sql += " AND (player_id LIKE ? OR nickname LIKE ?)"
+        args += [f"%{search}%"]*2
+    sql += " ORDER BY total_hands DESC LIMIT ?"
+    args.append(limit)
+    return execute_query(sql, tuple(args), db_name='heavy_analysis.db')

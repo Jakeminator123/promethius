@@ -63,12 +63,15 @@ def is_heavy_analysis_ready() -> bool:
         cursor = conn.cursor()
         
         # Kontrollera att actions-tabellen finns och har data
-        _ = cursor.execute("SELECT COUNT(*) FROM actions LIMIT 1")
+        cursor.execute("SELECT COUNT(*) FROM actions LIMIT 1")
         row_tmp = cursor.fetchone()
         count_row = cast(tuple[int], row_tmp) if row_tmp else None
+
+        cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='dashboard_summary'")
+        dash_exists = cursor.fetchone() is not None
         
         conn.close()
-        return bool(count_row[0]) if count_row else False
+        return dash_exists and bool(count_row and count_row[0])
         
     except Exception as e:
         log.debug(f"Heavy analysis DB not ready: {e}")

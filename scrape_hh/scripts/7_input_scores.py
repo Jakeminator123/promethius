@@ -115,12 +115,18 @@ def map_preflop_scores(con: sqlite3.Connection) -> int:
     """
     
     scores = {}
-    for hand_id, position, freq, best in cur.execute(sql_get_scores, list(hand_id_variants)):
-        # Spara både med och utan "Hand" prefix för flexibilitet
-        score_data = (freq, best)
-        scores[(hand_id, position)] = score_data
-        scores[(denormalize_hand_id(hand_id), position)] = score_data
-        scores[(normalize_hand_id(hand_id), position)] = score_data
+    def chunks(seq, n=400):
+        for i in range(0, len(seq), n):
+            yield seq[i:i + n]
+
+    for batch in chunks(list(hand_id_variants)):
+        q = f"{sql_get_scores} WHERE hand_id IN ({','.join('?'*len(batch))})"
+        for hand_id, position, freq, best in cur.execute(q, batch):
+            # Spara både med och utan "Hand" prefix för flexibilitet
+            score_data = (freq, best)
+            scores[(hand_id, position)] = score_data
+            scores[(denormalize_hand_id(hand_id), position)] = score_data
+            scores[(normalize_hand_id(hand_id), position)] = score_data
     
     # Mappa scores till actions
     updates = []

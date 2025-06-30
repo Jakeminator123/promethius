@@ -8,6 +8,7 @@ import uvicorn
 import sys
 import os
 from pathlib import Path
+import subprocess
 
 # Lägg till prom i path så vi kan importera app
 sys.path.insert(0, str(Path(__file__).parent))
@@ -41,10 +42,13 @@ if __name__ == "__main__":
         print(f"🌐 Frontend (när byggd): http://localhost:{port}")
         print("⏹️  Tryck Ctrl+C för att avsluta\n")
     
-    uvicorn.run(
-        "app:app",
-        host="0.0.0.0",
-        port=port,
-        reload=not is_render,  # Only reload in development
-        log_level="info"
-    ) 
+    cmd = [
+        "uvicorn", "app:app",
+        "--host", "0.0.0.0",
+        "--port", str(port),
+        "--log-level", "info",
+        "--workers", "2"
+    ]
+    # if not is_render:
+    #     cmd.append("--reload")
+    subprocess.run(cmd)

@@ -15,7 +15,11 @@ from .player_queries import (
 from .dashboard_queries import (
     get_dashboard_summary,
     get_top_players_table,
-    get_recent_activity
+    get_recent_activity,
+    dash_summary_new,
+    top_players_new,
+    player_row_new,
+    player_rows_new
 )
 from .player_comparison_queries import (
     get_all_players_for_comparison,
@@ -63,5 +67,9 @@ __all__ = [
     'get_segmented_player_data',
     'get_segment_hands',
     'get_segment_distribution',
-    'get_available_filters'
+    'get_available_filters',
+    'dash_summary_new',
+    'top_players_new',
+    'player_row_new',
+    'player_rows_new'
 ] 
