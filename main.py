@@ -14,7 +14,7 @@ from pathlib import Path
 import signal
 import threading
 from typing import Any
-import psutil  # För process-hantering
+# import psutil  # För process-hantering (kommenterad ut för Render)
 import socket
 
 # Import centraliserad path-hantering
@@ -33,38 +33,42 @@ def kill_old_processes():
     """Dödär gamla Python-processer som kör scraping/webserver"""
     if not IS_RENDER:
         return  # Bara på Render
-        
-    try:
-        current_pid = os.getpid()
-        killed_count = 0
-        
-        for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-            try:
-                # Skippa vår egen process
-                if proc.info['pid'] == current_pid:
-                    continue
-                    
-                # Leta efter andra Python-processer som kör våra scripts
-                if (proc.info['name'] in ['python', 'python3', 'python.exe'] and 
-                    proc.info['cmdline'] and 
-                    any('main.py' in str(cmd) or 'scrape.py' in str(cmd) or 'app.py' in str(cmd) 
-                        for cmd in proc.info['cmdline'])):
-                    
-                    print(f"🔪 Dödär gammal process: PID {proc.info['pid']} - {' '.join(proc.info['cmdline'][:3])}")
-                    proc.terminate()
-                    killed_count += 1
-                    
-            except (psutil.NoSuchProcess, psutil.AccessDenied):
-                continue
-                
-        if killed_count > 0:
-            print(f"✅ Dödade {killed_count} gamla processer")
-            time.sleep(2)  # Vänta så processer hinner dö
-        else:
-            print("✅ Inga gamla processer att döda")
-            
-    except Exception as e:
-        print(f"⚠️  Kunde inte döda gamla processer: {e}")
+    
+    # Kommenterat ut för Render - psutil krånglar
+    print("⏭️  Hoppar över process-cleanup (psutil inte tillgängligt)")
+    return
+    
+    # try:
+    #     current_pid = os.getpid()
+    #     killed_count = 0
+    #     
+    #     for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
+    #         try:
+    #             # Skippa vår egen process
+    #             if proc.info['pid'] == current_pid:
+    #                 continue
+    #                 
+    #             # Leta efter andra Python-processer som kör våra scripts
+    #             if (proc.info['name'] in ['python', 'python3', 'python.exe'] and 
+    #                 proc.info['cmdline'] and 
+    #                 any('main.py' in str(cmd) or 'scrape.py' in str(cmd) or 'app.py' in str(cmd) 
+    #                     for cmd in proc.info['cmdline'])):
+    #                 
+    #                 print(f"🔪 Dödär gammal process: PID {proc.info['pid']} - {' '.join(proc.info['cmdline'][:3])}")
+    #                 proc.terminate()
+    #                 killed_count += 1
+    #                 
+    #         except (psutil.NoSuchProcess, psutil.AccessDenied):
+    #             continue
+    #             
+    #     if killed_count > 0:
+    #         print(f"✅ Dödade {killed_count} gamla processer")
+    #         time.sleep(2)  # Vänta så processer hinner dö
+    #     else:
+    #         print("✅ Inga gamla processer att döda")
+    #         
+    # except Exception as e:
+    #     print(f"⚠️  Kunde inte döda gamla processer: {e}")
 
 def cleanup_database_locks():
     """Rensar SQLite WAL/SHM-filer och stänger låsningar - HITTAR ALLA DATABASER"""
