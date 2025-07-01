@@ -1,0 +1,49 @@
+{
+  "sizing_ranges": {
+    "tiny": [
+      0.0,
+      0.2
+    ],
+    "small": [
+      0.2,
+      0.35
+    ],
+    "medium": [
+      0.35,
+      0.55
+    ],
+    "big": [
+      0.55,
+      0.85
+    ],
+    "pot": [
+      0.85,
+      1.1
+    ],
+    "over": [
+      1.1,
+      1.75
+    ],
+    "huge": [
+      1.75,
+      999.0
+    ]
+  },
+  "strength_mappings": {
+    "low": {
+      "small": "block-bluff",
+      "medium": "thin-block",
+      "large": "block-barrel"
+    },
+    "medium": {
+      "small": "block-value",
+      "medium": "protection-bet",
+      "large": "block-strong"
+    },
+    "high": {
+      "small": "inducing-block",
+      "medium": "value-block",
+      "large": "block-nuts"
+    }
+  }
+} 

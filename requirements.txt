@@ -1,0 +1,10 @@
+requests          # För scraping HTTP calls
+pyyaml           # För YAML config files
+treys==0.1.8
+pandas           # För dataanalys
+fastapi==0.109.0 # Webserver framework
+uvicorn==0.25.0  # ASGI server
+psutil>=5.9.0    # För process-hantering och cleanup
+python-dotenv==1.1.0
+argparse
+vite

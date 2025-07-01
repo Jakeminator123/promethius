@@ -1,0 +1,9 @@
+BASE_URL=https://prod.battle-backend.prometheuspoker.com
+ORGANIZER=coinpoker
+EVENT=default
+BATCH_LIMIT=50
+BATCH_SIZE=500
+STARTING_DATE=2025-06-05
+NORMALIZE_CUR=Y
+
+TO_ERASE_FILES=poker.db, poker.db-wal, poker.db-shm, heavy_analysis.db, heavy_analysis.db-wal, heavy_analysis.db-shm
