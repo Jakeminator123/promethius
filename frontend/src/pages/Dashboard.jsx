@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Grid,
@@ -24,6 +24,9 @@ import {
   Checkbox,
   FormControlLabel,
   FormGroup,
+  Skeleton,
+  alpha,
+  useTheme,
 } from '@mui/material'
 import {
   People as PeopleIcon,
@@ -31,28 +34,271 @@ import {
   TrendingUp as TrendingUpIcon,
   EmojiEvents as TrophyIcon,
   Settings as SettingsIcon,
+  Shield as ShieldIcon,
+  Warning as WarningIcon,
+  VerifiedUser as VerifiedIcon,
+  Dangerous as DangerousIcon,
 } from '@mui/icons-material'
+import { motion, AnimatePresence } from 'framer-motion'
+import CountUp from 'react-countup'
+import { FixedSizeList as List } from 'react-window'
 import axios from 'axios'
 
-function StatCard({ title, value, icon, color }) {
+// Animation variants
+const cardVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0 },
+  hover: { scale: 1.02, transition: { duration: 0.2 } }
+}
+
+const rowVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: { opacity: 1, x: 0 },
+  hover: { backgroundColor: 'rgba(0, 212, 255, 0.05)' }
+}
+
+// Enhanced stat card with animations
+function StatCard({ title, value, icon, color, delay = 0, prefix = '', suffix = '', danger = false }) {
+  const [isHovered, setIsHovered] = useState(false)
+  const numericValue = typeof value === 'string' ? parseFloat(value.replace(/[^0-9.-]/g, '')) : value
+  
   return (
-    <Card>
-      <CardContent>
-        <Box display="flex" alignItems="center" justifyContent="space-between">
-          <Box>
-            <Typography color="textSecondary" gutterBottom variant="h6">
-              {title}
-            </Typography>
-            <Typography variant="h4">
-              {value}
-            </Typography>
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      whileHover="hover"
+      variants={cardVariants}
+      transition={{ duration: 0.4, delay }}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+    >
+      <Card
+        sx={{
+          background: danger 
+            ? 'linear-gradient(135deg, rgba(255, 71, 87, 0.1) 0%, rgba(255, 71, 87, 0.05) 100%)'
+            : 'linear-gradient(135deg, rgba(0, 212, 255, 0.05) 0%, rgba(0, 212, 255, 0.02) 100%)',
+          backdropFilter: 'blur(10px)',
+          border: danger
+            ? '1px solid rgba(255, 71, 87, 0.3)'
+            : '1px solid rgba(0, 212, 255, 0.2)',
+          boxShadow: isHovered 
+            ? danger
+              ? '0 8px 32px rgba(255, 71, 87, 0.2)'
+              : '0 8px 32px rgba(0, 212, 255, 0.2)'
+            : '0 4px 24px rgba(0, 0, 0, 0.1)',
+          transition: 'all 0.3s ease',
+        }}
+      >
+        <CardContent>
+          <Box display="flex" alignItems="center" justifyContent="space-between">
+            <Box>
+              <Typography 
+                variant="h6" 
+                sx={{ 
+                  color: 'text.secondary',
+                  fontSize: '0.875rem',
+                  fontWeight: 500,
+                  mb: 1
+                }}
+              >
+                {title}
+              </Typography>
+              <Typography variant="h3" sx={{ fontWeight: 700 }}>
+                {!isNaN(numericValue) ? (
+                  <>
+                    {prefix}
+                    <CountUp 
+                      end={numericValue} 
+                      duration={2.5} 
+                      separator="," 
+                      decimals={suffix === '%' ? 1 : 0}
+                    />
+                    {suffix}
+                  </>
+                ) : (
+                  value
+                )}
+              </Typography>
+            </Box>
+            <motion.div
+              animate={{ 
+                rotate: isHovered ? 360 : 0,
+                scale: isHovered ? 1.2 : 1
+              }}
+              transition={{ duration: 0.5 }}
+            >
+              <Box 
+                sx={{ 
+                  color: color || 'primary.main',
+                  opacity: 0.8,
+                  filter: isHovered ? 'drop-shadow(0 0 8px currentColor)' : 'none',
+                  transition: 'all 0.3s ease'
+                }}
+              >
+                {icon}
+              </Box>
+            </motion.div>
           </Box>
-          <Box sx={{ color: color || 'primary.main' }}>
-            {icon}
-          </Box>
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
+}
+
+// Virtual table row component
+const VirtualRow = ({ index, style, data }) => {
+  const { players, handlePlayerClick, selectedColumns } = data
+  const player = players[index]
+  const navigate = useNavigate()
+  
+  // Risk assessment based on stats
+  const getRiskLevel = (player) => {
+    const avgJScore = player.avg_j_score || 0
+    const winrate = player.winrate_bb100 || 0
+    
+    if (avgJScore < 30 || winrate < -20) return 'high'
+    if (avgJScore < 50 || winrate < -5) return 'medium'
+    return 'low'
+  }
+  
+  const riskLevel = getRiskLevel(player)
+  const riskColors = {
+    high: '#ff4757',
+    medium: '#ffa502',
+    low: '#00ff88'
+  }
+  
+  return (
+    <motion.div
+      style={style}
+      initial="hidden"
+      animate="visible"
+      whileHover="hover"
+      variants={rowVariants}
+      transition={{ duration: 0.2 }}
+    >
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          px: 3,
+          py: 2,
+          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+          cursor: 'pointer',
+          '&:hover': {
+            backgroundColor: alpha('#00d4ff', 0.05),
+          }
+        }}
+        onClick={() => handlePlayerClick(player.player_id, player.nickname)}
+      >
+        <Box flex="0 0 40px" sx={{ mr: 2 }}>
+          {index < 3 && (
+            <motion.div
+              animate={{ rotate: [0, 10, -10, 0] }}
+              transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+            >
+              <TrophyIcon 
+                sx={{ 
+                  fontSize: 20, 
+                  color: index === 0 ? '#FFD700' : index === 1 ? '#C0C0C0' : '#CD7F32' 
+                }} 
+              />
+            </motion.div>
+          )}
         </Box>
-      </CardContent>
-    </Card>
+        
+        <Box flex="1 1 200px" sx={{ minWidth: 0 }}>
+          <Typography 
+            variant="body2" 
+            sx={{ 
+              fontWeight: 600,
+              color: '#00d4ff',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap'
+            }}
+          >
+            {player.nickname || player.player_id}
+          </Typography>
+        </Box>
+        
+        <Box flex="0 0 100px" sx={{ textAlign: 'right' }}>
+          <Typography variant="body2" sx={{ fontWeight: 500 }}>
+            {player.total_hands ? player.total_hands.toLocaleString() : '0'}
+          </Typography>
+        </Box>
+        
+        <Box flex="0 0 120px" sx={{ textAlign: 'right' }}>
+          <Chip 
+            label={`${(player.winrate_bb100 || 0).toFixed(2)} BB/100`}
+            size="small"
+            sx={{
+              backgroundColor: alpha(player.winrate_bb100 > 0 ? '#00ff88' : '#ff4757', 0.2),
+              color: player.winrate_bb100 > 0 ? '#00ff88' : '#ff4757',
+              border: `1px solid ${player.winrate_bb100 > 0 ? '#00ff88' : '#ff4757'}`,
+              fontWeight: 600
+            }}
+          />
+        </Box>
+        
+        <Box flex="0 0 80px" sx={{ textAlign: 'right' }}>
+          <Typography variant="body2">{(player.vpip || 0).toFixed(1)}%</Typography>
+        </Box>
+        
+        <Box flex="0 0 80px" sx={{ textAlign: 'right' }}>
+          <Typography variant="body2">{(player.pfr || 0).toFixed(1)}%</Typography>
+        </Box>
+        
+        <Box flex="0 0 100px" sx={{ textAlign: 'right' }}>
+          <Chip 
+            label={player.avg_j_score?.toFixed(1) || '-'}
+            size="small"
+            sx={{
+              backgroundColor: alpha('#00d4ff', 0.2),
+              color: '#00d4ff',
+              border: '1px solid #00d4ff',
+              fontWeight: 600
+            }}
+          />
+        </Box>
+        
+        <Box flex="0 0 100px" sx={{ textAlign: 'center' }}>
+          <Chip
+            icon={
+              riskLevel === 'high' ? <WarningIcon sx={{ fontSize: 16 }} /> :
+              riskLevel === 'medium' ? <DangerousIcon sx={{ fontSize: 16 }} /> :
+              <VerifiedIcon sx={{ fontSize: 16 }} />
+            }
+            label={riskLevel.toUpperCase()}
+            size="small"
+            sx={{
+              backgroundColor: alpha(riskColors[riskLevel], 0.2),
+              color: riskColors[riskLevel],
+              border: `1px solid ${riskColors[riskLevel]}`,
+              fontWeight: 600
+            }}
+          />
+        </Box>
+      </Box>
+    </motion.div>
+  )
+}
+
+// Loading skeleton
+function DashboardSkeleton() {
+  return (
+    <Box>
+      <Grid container spacing={3} sx={{ mt: 2 }}>
+        {[1, 2, 3, 4].map((i) => (
+          <Grid item xs={12} sm={6} md={3} key={i}>
+            <Skeleton variant="rectangular" height={120} sx={{ borderRadius: 2 }} />
+          </Grid>
+        ))}
+      </Grid>
+      <Box sx={{ mt: 3 }}>
+        <Skeleton variant="rectangular" height={400} sx={{ borderRadius: 2 }} />
+      </Box>
+    </Box>
   )
 }
 
@@ -67,6 +313,7 @@ function Dashboard() {
     tilt_deviance: false,
   })
   const navigate = useNavigate()
+  const theme = useTheme()
 
   const availableColumns = [
     { key: 'solver_precision_score', label: 'Solver Precision Score' },
@@ -99,224 +346,192 @@ function Dashboard() {
 
   const handleColumnsApply = () => {
     setColumnDialogOpen(false)
-    // TODO: Refetch data with selected columns
   }
 
-  const handlePlayerClick = (playerId, nickname) => {
-    // Navigate to hands page with player parameter
+  const handlePlayerClick = useCallback((playerId, nickname) => {
     const playerName = nickname || playerId
     navigate(`/hands?player=${encodeURIComponent(playerName)}`)
-  }
+  }, [navigate])
 
   if (loading) {
-    return <LinearProgress />
+    return <DashboardSkeleton />
   }
+
+  // Calculate fraud detection metrics
+  const suspiciousPlayers = stats?.top_players?.filter(p => 
+    (p.avg_j_score && p.avg_j_score < 30) || 
+    (p.winrate_bb100 && p.winrate_bb100 < -20)
+  ).length || 0
+
+  const avgWinrate = stats?.top_players?.reduce((acc, p) => acc + (p.winrate_bb100 || 0), 0) / (stats?.top_players?.length || 1) || 0
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Dashboard
-      </Typography>
-      <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-        Poker Statistics Overview
-      </Typography>
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Typography 
+          variant="h4" 
+          gutterBottom 
+          sx={{ 
+            fontWeight: 700,
+            background: 'linear-gradient(135deg, #00d4ff 0%, #00ff88 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
+        >
+          Fraud Detection Dashboard
+        </Typography>
+        <Typography variant="subtitle1" sx={{ color: 'text.secondary', mb: 3 }}>
+          Real-time poker analytics and anomaly detection
+        </Typography>
+      </motion.div>
 
       <Grid container spacing={3} sx={{ mt: 2 }}>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <StatCard
-            title="Total Players"
+            title="Total Players Analyzed"
             value={stats?.total_players || 0}
             icon={<PeopleIcon sx={{ fontSize: 40 }} />}
-            color="primary.main"
+            color="#00d4ff"
+            delay={0}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <StatCard
-            title="Hands Played"
+            title="Hands Processed"
             value={stats?.total_hands || 0}
             icon={<CasinoIcon sx={{ fontSize: 40 }} />}
-            color="success.main"
+            color="#00ff88"
+            delay={0.1}
           />
         </Grid>
-        <Grid item xs={12} sm={6} md={3}>
+        <Grid item xs={12} sm={6} md={4}>
           <StatCard
-            title="Average VPIP"
-            value={`${stats?.avg_vpip || 0}%`}
-            icon={<TrendingUpIcon sx={{ fontSize: 40 }} />}
-            color="warning.main"
-          />
-        </Grid>
-        <Grid item xs={12} sm={6} md={3}>
-          <StatCard
-            title="Average PFR"
-            value={`${stats?.avg_pfr || 0}%`}
-            icon={<TrophyIcon sx={{ fontSize: 40 }} />}
-            color="info.main"
+            title="Suspicious Activity"
+            value={suspiciousPlayers}
+            icon={<WarningIcon sx={{ fontSize: 40 }} />}
+            color="#ff4757"
+            delay={0.2}
+            danger={true}
           />
         </Grid>
       </Grid>
 
       <Grid container spacing={3} sx={{ mt: 3 }}>
         <Grid item xs={12}>
-          <Paper sx={{ p: 3 }}>
-            <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-              <Typography variant="h6">
-                Top 25 Players (Most Hands)
-              </Typography>
-              <IconButton 
-                onClick={() => setColumnDialogOpen(true)}
-                size="small"
-                title="Customize columns"
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5, delay: 0.4 }}
+          >
+            <Paper 
+              sx={{ 
+                p: 3,
+                background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.9) 0%, rgba(17, 24, 39, 0.7) 100%)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.05)',
+              }}
+            >
+              <Box display="flex" alignItems="center" justifyContent="space-between" mb={3}>
+                <Box display="flex" alignItems="center" gap={2}>
+                  <ShieldIcon sx={{ color: '#00d4ff', fontSize: 28 }} />
+                  <Box>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                      Player Risk Assessment
+                    </Typography>
+                  </Box>
+                </Box>
+                <IconButton 
+                  onClick={() => setColumnDialogOpen(true)}
+                  size="small"
+                  sx={{
+                    color: '#00d4ff',
+                    '&:hover': {
+                      backgroundColor: alpha('#00d4ff', 0.1),
+                    }
+                  }}
+                >
+                  <SettingsIcon />
+                </IconButton>
+              </Box>
+
+              {/* Virtual Table Header */}
+              <Box
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  px: 3,
+                  py: 2,
+                  borderBottom: '2px solid rgba(0, 212, 255, 0.3)',
+                  backgroundColor: alpha('#00d4ff', 0.05),
+                }}
               >
-                <SettingsIcon />
-              </IconButton>
-            </Box>
-            {stats?.top_players && stats.top_players.length > 0 ? (
-              <TableContainer>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Player</TableCell>
-                      <TableCell align="right">Hands</TableCell>
-                      <TableCell align="right">Winrate (BB/100)</TableCell>
-                      <TableCell align="right">VPIP %</TableCell>
-                      <TableCell align="right">PFR %</TableCell>
-                      <TableCell align="right">Preflop Score</TableCell>
-                      <TableCell align="right">Postflop Score</TableCell>
-                      <TableCell align="right">Overall J-Score</TableCell>
-                      {selectedColumns.solver_precision_score && <TableCell align="right">Solver Precision</TableCell>}
-                      {selectedColumns.calldown_accuracy && <TableCell align="right">Calldown Accuracy</TableCell>}
-                      {selectedColumns.bet_deviance && <TableCell align="right">Bet Deviance</TableCell>}
-                      {selectedColumns.tilt_deviance && <TableCell align="right">Tilt Deviance</TableCell>}
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {stats.top_players.map((player, index) => (
-                      <TableRow key={player.player_id} hover>
-                        <TableCell>
-                          <Box display="flex" alignItems="center" gap={1}>
-                            {index < 3 && <TrophyIcon sx={{ fontSize: 16, color: index === 0 ? 'gold' : index === 1 ? 'silver' : '#cd7f32' }} />}
-                            <Typography 
-                              variant="body2" 
-                              sx={{ 
-                                cursor: 'pointer', 
-                                '&:hover': { 
-                                  textDecoration: 'underline',
-                                  color: 'primary.main'
-                                }
-                              }}
-                              onClick={() => handlePlayerClick(player.player_id, player.nickname)}
-                            >
-                              {player.nickname || player.player_id}
-                            </Typography>
-                          </Box>
-                        </TableCell>
-                        <TableCell align="right">{player.total_hands}</TableCell>
-                        <TableCell align="right">
-                          <Chip 
-                            label={(player.winrate_bb100 || 0).toFixed(2)} 
-                            size="small"
-                            color={player.winrate_bb100 > 0 ? 'success' : 'error'}
-                          />
-                        </TableCell>
-                        <TableCell align="right">{(player.vpip || 0).toFixed(1)}</TableCell>
-                        <TableCell align="right">{(player.pfr || 0).toFixed(1)}</TableCell>
-                        <TableCell align="right">
-                          {player.avg_preflop_score !== null && player.avg_preflop_score !== undefined ? (
-                            <Chip 
-                              label={player.avg_preflop_score.toFixed(1)} 
-                              size="small"
-                              color={player.avg_preflop_score > 70 ? 'success' : player.avg_preflop_score > 50 ? 'warning' : 'error'}
-                            />
-                          ) : (
-                            <Typography variant="body2" color="text.secondary">-</Typography>
-                          )}
-                        </TableCell>
-                        <TableCell align="right">
-                          {player.avg_postflop_score !== null && player.avg_postflop_score !== undefined ? (
-                            <Chip 
-                              label={player.avg_postflop_score.toFixed(1)} 
-                              size="small"
-                              color={player.avg_postflop_score > 70 ? 'success' : player.avg_postflop_score > 50 ? 'warning' : 'error'}
-                            />
-                          ) : (
-                            <Typography variant="body2" color="text.secondary">-</Typography>
-                          )}
-                        </TableCell>
-                        <TableCell align="right">
-                          {player.avg_j_score !== null && player.avg_j_score !== undefined ? (
-                            <Chip 
-                              label={player.avg_j_score.toFixed(1)} 
-                              size="small"
-                              color={player.avg_j_score > 50 ? 'primary' : 'default'}
-                            />
-                          ) : (
-                            <Typography variant="body2" color="text.secondary">-</Typography>
-                          )}
-                        </TableCell>
-                        {selectedColumns.solver_precision_score && (
-                          <TableCell align="right">
-                            {player.solver_precision_score !== null && player.solver_precision_score !== undefined ? (
-                              <Chip 
-                                label={player.solver_precision_score.toFixed(1)} 
-                                size="small"
-                                color={player.solver_precision_score > 70 ? 'success' : player.solver_precision_score > 50 ? 'warning' : 'error'}
-                              />
-                            ) : (
-                              <Typography variant="body2" color="text.secondary">-</Typography>
-                            )}
-                          </TableCell>
-                        )}
-                        {selectedColumns.calldown_accuracy && (
-                          <TableCell align="right">
-                            {player.calldown_accuracy !== null && player.calldown_accuracy !== undefined ? (
-                              <Chip 
-                                label={player.calldown_accuracy} 
-                                size="small"
-                                color={player.calldown_accuracy > 60 ? 'success' : player.calldown_accuracy > 45 ? 'warning' : 'error'}
-                              />
-                            ) : (
-                              <Typography variant="body2" color="text.secondary">-</Typography>
-                            )}
-                          </TableCell>
-                        )}
-                        {selectedColumns.bet_deviance && (
-                          <TableCell align="right">
-                            {player.bet_deviance !== null && player.bet_deviance !== undefined ? (
-                              <Chip 
-                                label={player.bet_deviance} 
-                                size="small"
-                                color={player.bet_deviance < 20 ? 'default' : player.bet_deviance < 40 ? 'warning' : 'error'}
-                              />
-                            ) : (
-                              <Typography variant="body2" color="text.secondary">-</Typography>
-                            )}
-                          </TableCell>
-                        )}
-                        {selectedColumns.tilt_deviance && (
-                          <TableCell align="right">
-                            {player.tilt_factor !== null && player.tilt_factor !== undefined ? (
-                              <Chip 
-                                label={player.tilt_factor} 
-                                size="small"
-                                color={player.tilt_factor < 10 ? 'success' : player.tilt_factor < 25 ? 'warning' : 'error'}
-                              />
-                            ) : (
-                              <Typography variant="body2" color="text.secondary">-</Typography>
-                            )}
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </TableContainer>
-            ) : (
-              <Typography variant="body2" color="text.secondary">
-                No data available. Check database connection.
-              </Typography>
-            )}
-          </Paper>
+                <Box flex="0 0 40px" sx={{ mr: 2 }} />
+                <Box flex="1 1 200px">
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#00d4ff' }}>
+                    PLAYER
+                  </Typography>
+                </Box>
+                <Box flex="0 0 100px" sx={{ textAlign: 'right' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#00d4ff' }}>
+                    HANDS
+                  </Typography>
+                </Box>
+                <Box flex="0 0 120px" sx={{ textAlign: 'right' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#00d4ff' }}>
+                    WIN RATE
+                  </Typography>
+                </Box>
+                <Box flex="0 0 80px" sx={{ textAlign: 'right' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#00d4ff' }}>
+                    VPIP
+                  </Typography>
+                </Box>
+                <Box flex="0 0 80px" sx={{ textAlign: 'right' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#00d4ff' }}>
+                    PFR
+                  </Typography>
+                </Box>
+                <Box flex="0 0 100px" sx={{ textAlign: 'right' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#00d4ff' }}>
+                    J-SCORE
+                  </Typography>
+                </Box>
+                <Box flex="0 0 100px" sx={{ textAlign: 'center' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#00d4ff' }}>
+                    RISK LEVEL
+                  </Typography>
+                </Box>
+              </Box>
+
+              {/* Virtual Table Body */}
+              {stats?.top_players && stats.top_players.length > 0 ? (
+                <List
+                  height={600}
+                  itemCount={stats.top_players.length}
+                  itemSize={64}
+                  width="100%"
+                  itemData={{ 
+                    players: stats.top_players, 
+                    handlePlayerClick,
+                    selectedColumns 
+                  }}
+                >
+                  {VirtualRow}
+                </List>
+              ) : (
+                <Box sx={{ p: 4, textAlign: 'center' }}>
+                  <Typography variant="body2" color="text.secondary">
+                    No player data available. Check database connection.
+                  </Typography>
+                </Box>
+              )}
+            </Paper>
+          </motion.div>
         </Grid>
       </Grid>
 
@@ -325,11 +540,17 @@ function Dashboard() {
         onClose={() => setColumnDialogOpen(false)}
         maxWidth="sm"
         fullWidth
+        PaperProps={{
+          sx: {
+            background: '#111827',
+            border: '1px solid rgba(0, 212, 255, 0.3)',
+          }
+        }}
       >
         <DialogTitle>Customize Table Columns</DialogTitle>
         <DialogContent>
           <Typography variant="body2" color="text.secondary" gutterBottom>
-            Select up to 4 additional columns to display
+            Select additional columns to display
           </Typography>
           <FormGroup>
             {availableColumns.map(column => (
@@ -343,6 +564,12 @@ function Dashboard() {
                       !selectedColumns[column.key] && 
                       Object.values(selectedColumns).filter(v => v).length >= 4
                     }
+                    sx={{
+                      color: '#00d4ff',
+                      '&.Mui-checked': {
+                        color: '#00d4ff',
+                      },
+                    }}
                   />
                 }
                 label={column.label}

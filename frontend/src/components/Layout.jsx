@@ -14,17 +14,20 @@ import {
   ListItemIcon,
   ListItemText,
   Container,
+  alpha,
 } from '@mui/material'
 import {
   Menu as MenuIcon,
   Dashboard as DashboardIcon,
-  People as PeopleIcon,
+  Shield as ShieldIcon,
   Search as SearchIcon,
-  TrendingUp as AnalysisIcon,
+  QueryStats as StatsIcon,
   Logout as LogoutIcon,
+  Security as SecurityIcon,
+  BarChart as ChartIcon,
 } from '@mui/icons-material'
 
-const drawerWidth = 240
+const drawerWidth = 280
 
 function Layout({ onLogout }) {
   const location = useLocation()
@@ -35,55 +38,143 @@ function Layout({ onLogout }) {
   }
 
   const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-    { text: 'Search Hands', icon: <SearchIcon />, path: '/hands' },
-    { text: 'Player Comparison', icon: <PeopleIcon />, path: '/advanced-comparison' },
-    { text: 'Betting Analysis', icon: <AnalysisIcon />, path: '/betting-analysis' },
+    { text: 'Fraud Detection Dashboard', icon: <ShieldIcon />, path: '/' },
+    { text: 'Hand Analysis', icon: <SearchIcon />, path: '/hands' },
+    { text: 'Player Segmentation', icon: <StatsIcon />, path: '/advanced-comparison' },
+    { text: 'Betting Patterns', icon: <ChartIcon />, path: '/betting-analysis' },
   ]
 
   const drawer = (
-    <div>
-      <Toolbar>
-        <Typography variant="h6" noWrap>
-          Prom Analytics
-        </Typography>
-      </Toolbar>
-      <Divider />
-      <List>
-        {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
-            <ListItemButton
-              component={Link}
-              to={item.path}
-              selected={location.pathname === item.path}
+    <Box
+      sx={{
+        height: '100%',
+        background: 'linear-gradient(180deg, #0a0e1a 0%, #111827 100%)',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
+      <Toolbar
+        sx={{
+          px: 3,
+          py: 3,
+          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+          <SecurityIcon sx={{ color: '#00d4ff', fontSize: 32 }} />
+          <Box>
+            <Typography
+              variant="h6"
+              noWrap
+              sx={{
+                background: 'linear-gradient(135deg, #00d4ff 0%, #00ff88 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                fontWeight: 700,
+              }}
             >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
+              PokerGuard AI
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Anti-Fraud Analytics
+            </Typography>
+          </Box>
+        </Box>
+      </Toolbar>
+      
+      <List sx={{ px: 2, py: 2, flexGrow: 1 }}>
+        {menuItems.map((item) => {
+          const isActive = location.pathname === item.path
+          return (
+            <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>
+              <ListItemButton
+                component={Link}
+                to={item.path}
+                sx={{
+                  borderRadius: 2,
+                  px: 2,
+                  py: 1.5,
+                  background: isActive
+                    ? 'linear-gradient(135deg, rgba(0, 212, 255, 0.15) 0%, rgba(0, 212, 255, 0.05) 100%)'
+                    : 'transparent',
+                  border: isActive
+                    ? '1px solid rgba(0, 212, 255, 0.3)'
+                    : '1px solid transparent',
+                  '&:hover': {
+                    background: 'rgba(0, 212, 255, 0.05)',
+                    border: '1px solid rgba(0, 212, 255, 0.2)',
+                  },
+                  transition: 'all 0.3s ease',
+                }}
+              >
+                <ListItemIcon
+                  sx={{
+                    color: isActive ? '#00d4ff' : 'text.secondary',
+                    minWidth: 40,
+                  }}
+                >
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText
+                  primary={item.text}
+                  primaryTypographyProps={{
+                    fontSize: '0.9rem',
+                    fontWeight: isActive ? 600 : 400,
+                    color: isActive ? '#00d4ff' : 'text.primary',
+                  }}
+                />
+              </ListItemButton>
+            </ListItem>
+          )
+        })}
       </List>
-      <Divider />
-      <List>
+      
+      <Divider sx={{ borderColor: 'rgba(255, 255, 255, 0.05)' }} />
+      
+      <List sx={{ px: 2, py: 2 }}>
         <ListItem disablePadding>
-          <ListItemButton onClick={onLogout}>
-            <ListItemIcon>
+          <ListItemButton
+            onClick={onLogout}
+            sx={{
+              borderRadius: 2,
+              px: 2,
+              py: 1.5,
+              '&:hover': {
+                background: 'rgba(255, 71, 87, 0.1)',
+                '& .MuiListItemIcon-root': {
+                  color: '#ff4757',
+                },
+              },
+              transition: 'all 0.3s ease',
+            }}
+          >
+            <ListItemIcon sx={{ minWidth: 40 }}>
               <LogoutIcon />
             </ListItemIcon>
-            <ListItemText primary="Sign Out" />
+            <ListItemText
+              primary="Sign Out"
+              primaryTypographyProps={{
+                fontSize: '0.9rem',
+              }}
+            />
           </ListItemButton>
         </ListItem>
       </List>
-    </div>
+    </Box>
   )
 
   return (
-    <Box sx={{ display: 'flex' }}>
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
       <AppBar
         position="fixed"
         sx={{
           width: { sm: `calc(100% - ${drawerWidth}px)` },
           ml: { sm: `${drawerWidth}px` },
+          background: alpha('#111827', 0.8),
+          backdropFilter: 'blur(10px)',
+          borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+          boxShadow: 'none',
         }}
       >
         <Toolbar>
@@ -96,8 +187,8 @@ function Layout({ onLogout }) {
           >
             <MenuIcon />
           </IconButton>
-          <Typography variant="h6" noWrap component="div">
-            {menuItems.find(item => item.path === location.pathname)?.text || 'Prom Analytics'}
+          <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 600 }}>
+            {menuItems.find(item => item.path === location.pathname)?.text || 'PokerGuard AI'}
           </Typography>
         </Toolbar>
       </AppBar>
@@ -118,6 +209,8 @@ function Layout({ onLogout }) {
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
               width: drawerWidth,
+              backgroundColor: '#0a0e1a',
+              borderRight: '1px solid rgba(255, 255, 255, 0.05)',
             },
           }}
         >
@@ -130,6 +223,8 @@ function Layout({ onLogout }) {
             '& .MuiDrawer-paper': {
               boxSizing: 'border-box',
               width: drawerWidth,
+              backgroundColor: '#0a0e1a',
+              borderRight: '1px solid rgba(255, 255, 255, 0.05)',
             },
           }}
           open
@@ -144,10 +239,12 @@ function Layout({ onLogout }) {
           flexGrow: 1,
           p: 3,
           width: { sm: `calc(100% - ${drawerWidth}px)` },
+          background: 'radial-gradient(ellipse at top right, rgba(0, 212, 255, 0.05) 0%, transparent 50%)',
+          minHeight: '100vh',
         }}
       >
         <Toolbar />
-        <Container maxWidth="lg">
+        <Container maxWidth="xl">
           <Outlet />
         </Container>
       </Box>

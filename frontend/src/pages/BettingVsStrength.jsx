@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   Box,
@@ -23,15 +23,13 @@ import {
   DialogTitle,
   DialogContent,
   DialogActions,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Card,
   CardContent,
-  Stack
+  Stack,
+  alpha,
+  Skeleton,
+  IconButton,
+  Tooltip,
 } from '@mui/material'
 import { 
   ScatterChart, 
@@ -46,36 +44,139 @@ import {
   PolarGrid,
   PolarAngleAxis,
   PolarRadiusAxis,
-  Radar
+  Radar,
+  Cell,
 } from 'recharts'
 import { 
   TrendingUp as AnalysisIcon, 
   Person as PersonIcon,
   Casino as PokerIcon,
   History as HistoryIcon,
-  Visibility as ViewIcon
+  Visibility as ViewIcon,
+  Shield as ShieldIcon,
+  Warning as WarningIcon,
+  Info as InfoIcon,
+  Refresh as RefreshIcon,
+  ZoomIn as ZoomInIcon,
+  ZoomOut as ZoomOutIcon,
 } from '@mui/icons-material'
+import { motion, AnimatePresence } from 'framer-motion'
+import CountUp from 'react-countup'
+import { FixedSizeList } from 'react-window'
 import axios from 'axios'
 import HandHistoryViewer from '../components/HandHistoryViewer'
 
-// Color mapping for different streets
+// Enhanced color palettes
 const STREET_COLORS = {
-  'flop': '#2196F3',    // Blue
-  'turn': '#FF9800',    // Orange  
-  'river': '#4CAF50',   // Green
-  'preflop': '#9C27B0'  // Purple
+  'flop': '#00d4ff',
+  'turn': '#ffa502',  
+  'river': '#00ff88',
+  'preflop': '#ff6b81'
 }
 
-// Color mapping for action types
 const ACTION_COLORS = {
-  'bet': '#2196F3',
-  '2bet': '#FF5722',
-  '3bet': '#E91E63',
-  'checkraise': '#9C27B0',
+  'bet': '#00d4ff',
+  '2bet': '#ff4757',
+  '3bet': '#ff6b81',
+  'checkraise': '#a55eea',
   'donk': '#795548',
   'probe': '#607D8B',
-  'lead': '#009688',
-  'cont': '#8BC34A'
+  'lead': '#26de81',
+  'cont': '#45aaf2'
+}
+
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+}
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: {
+      duration: 0.4
+    }
+  }
+}
+
+// Enhanced stat card component
+function MetricCard({ title, value, icon, color, subtitle, trend, delay = 0 }) {
+  const [isHovered, setIsHovered] = useState(false)
+  
+  return (
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={itemVariants}
+      transition={{ delay }}
+      whileHover={{ scale: 1.02 }}
+      onHoverStart={() => setIsHovered(true)}
+      onHoverEnd={() => setIsHovered(false)}
+    >
+      <Card
+        sx={{
+          background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.9) 0%, rgba(17, 24, 39, 0.7) 100%)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.05)',
+          boxShadow: isHovered ? '0 8px 32px rgba(0, 212, 255, 0.2)' : '0 4px 24px rgba(0, 0, 0, 0.1)',
+          transition: 'all 0.3s ease',
+          height: '100%',
+        }}
+      >
+        <CardContent>
+          <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
+            <Box
+              sx={{
+                p: 1.5,
+                borderRadius: 2,
+                background: alpha(color || '#00d4ff', 0.1),
+                color: color || '#00d4ff',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              {icon}
+            </Box>
+            {trend && (
+              <Chip
+                size="small"
+                label={trend}
+                sx={{
+                  backgroundColor: alpha(trend > 0 ? '#00ff88' : '#ff4757', 0.2),
+                  color: trend > 0 ? '#00ff88' : '#ff4757',
+                  fontWeight: 600,
+                }}
+              />
+            )}
+          </Box>
+          <Typography variant="h5" sx={{ fontWeight: 700, mb: 0.5 }}>
+            {typeof value === 'number' ? (
+              <CountUp end={value} duration={2} separator="," decimals={0} />
+            ) : (
+              value
+            )}
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            {title}
+          </Typography>
+          {subtitle && (
+            <Typography variant="caption" sx={{ color: color || '#00d4ff', mt: 1, display: 'block' }}>
+              {subtitle}
+            </Typography>
+          )}
+        </CardContent>
+      </Card>
+    </motion.div>
+  )
 }
 
 function BettingVsStrength() {
