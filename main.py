@@ -410,6 +410,8 @@ def run_scraping_loop(
             break
         except Exception as e:
             print(f"❌ Fel i loop för {day.isoformat()}: {e}")
+            import traceback
+            traceback.print_exc()
             print(f"⏭️  Hoppar över och fortsätter...")
             day += datetime.timedelta(days=1)
             time.sleep(5)

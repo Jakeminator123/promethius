@@ -288,23 +288,86 @@ const VirtualRow = ({ index, style, data }) => {
           />
         </Box>
         
-        <Box flex="0 0 80px" sx={{ textAlign: 'right' }}>
-          <Chip
-            icon={
-              riskLevel === 'high' ? <WarningIcon sx={{ fontSize: 16 }} /> :
-              riskLevel === 'medium' ? <DangerousIcon sx={{ fontSize: 16 }} /> :
-              <VerifiedIcon sx={{ fontSize: 16 }} />
-            }
-            label={riskLevel.toUpperCase()}
-            size="small"
-            sx={{
-              backgroundColor: alpha(riskColors[riskLevel], 0.2),
-              color: riskColors[riskLevel],
-              border: `1px solid ${riskColors[riskLevel]}`,
-              fontWeight: 600
-            }}
-          />
-        </Box>
+        {!Object.values(selectedColumns).some(v => v) && (
+          <Box flex="0 0 80px" sx={{ textAlign: 'right' }}>
+            <Chip
+              icon={
+                riskLevel === 'high' ? <WarningIcon sx={{ fontSize: 16 }} /> :
+                riskLevel === 'medium' ? <DangerousIcon sx={{ fontSize: 16 }} /> :
+                <VerifiedIcon sx={{ fontSize: 16 }} />
+              }
+              label={riskLevel.toUpperCase()}
+              size="small"
+              sx={{
+                backgroundColor: alpha(riskColors[riskLevel], 0.2),
+                color: riskColors[riskLevel],
+                border: `1px solid ${riskColors[riskLevel]}`,
+                fontWeight: 600
+              }}
+            />
+          </Box>
+        )}
+        
+        {/* Extra columns */}
+        {selectedColumns.solver_precision_score && (
+          <Box flex="0 0 80px" sx={{ textAlign: 'center' }}>
+            <Chip 
+              label={player.solver_precision_score != null ? `${player.solver_precision_score}%` : '-'}
+              size="small"
+              sx={{
+                backgroundColor: alpha('#00ff88', 0.2),
+                color: '#00ff88',
+                border: '1px solid #00ff88',
+                fontWeight: 600
+              }}
+            />
+          </Box>
+        )}
+        
+        {selectedColumns.calldown_accuracy && (
+          <Box flex="0 0 80px" sx={{ textAlign: 'center' }}>
+            <Chip 
+              label={player.calldown_accuracy != null ? `${player.calldown_accuracy}%` : '-'}
+              size="small"
+              sx={{
+                backgroundColor: alpha('#ffa502', 0.2),
+                color: '#ffa502',
+                border: '1px solid #ffa502',
+                fontWeight: 600
+              }}
+            />
+          </Box>
+        )}
+        
+        {selectedColumns.bet_deviance && (
+          <Box flex="0 0 80px" sx={{ textAlign: 'center' }}>
+            <Chip 
+              label={player.bet_deviance != null ? `${player.bet_deviance}%` : '-'}
+              size="small"
+              sx={{
+                backgroundColor: alpha('#ff6348', 0.2),
+                color: '#ff6348',
+                border: '1px solid #ff6348',
+                fontWeight: 600
+              }}
+            />
+          </Box>
+        )}
+        
+        {selectedColumns.tilt_factor && (
+          <Box flex="0 0 80px" sx={{ textAlign: 'center' }}>
+            <Chip 
+              label={player.tilt_factor != null ? `${player.tilt_factor}` : '-'}
+              size="small"
+              sx={{
+                backgroundColor: alpha('#5f27cd', 0.2),
+                color: '#5f27cd',
+                border: '1px solid #5f27cd',
+                fontWeight: 600
+              }}
+            />
+          </Box>
+        )}
       </Box>
     </motion.div>
   )
@@ -336,16 +399,16 @@ function Dashboard() {
     solver_precision_score: false,
     calldown_accuracy: false,
     bet_deviance: false,
-    tilt_deviance: false,
+    tilt_factor: false,
   })
   const navigate = useNavigate()
   const theme = useTheme()
 
   const availableColumns = [
-    { key: 'solver_precision_score', label: 'Solver Precision Score' },
-    { key: 'calldown_accuracy', label: 'Calldown Accuracy' },
-    { key: 'bet_deviance', label: 'Bet Deviance' },
-    { key: 'tilt_deviance', label: 'Tilt Deviance' },
+    { key: 'solver_precision_score', label: 'Solver Precision Score', description: '% of optimal solver decisions' },
+    { key: 'calldown_accuracy', label: 'Calldown Accuracy', description: 'Win rate when calling on river' },
+    { key: 'bet_deviance', label: 'Bet Deviance', description: 'How much player deviates from standard sizing' },
+    { key: 'tilt_factor', label: 'Tilt Factor', description: 'Performance drop after losses (0-100)' },
   ]
 
   useEffect(() => {
@@ -557,11 +620,46 @@ function Dashboard() {
                     POSTFLOP
                   </Typography>
                 </Box>
-                <Box flex="0 0 80px" sx={{ textAlign: 'right' }}>
-                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#00d4ff' }}>
-                    RISK LEVEL
-                  </Typography>
-                </Box>
+                {!Object.values(selectedColumns).some(v => v) && (
+                  <Box flex="0 0 80px" sx={{ textAlign: 'right' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: '#00d4ff' }}>
+                      RISK LEVEL
+                    </Typography>
+                  </Box>
+                )}
+                
+                {/* Extra column headers */}
+                {selectedColumns.solver_precision_score && (
+                  <Box flex="0 0 80px" sx={{ textAlign: 'center' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: '#00d4ff' }}>
+                      SOLVER %
+                    </Typography>
+                  </Box>
+                )}
+                
+                {selectedColumns.calldown_accuracy && (
+                  <Box flex="0 0 80px" sx={{ textAlign: 'center' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: '#00d4ff' }}>
+                      CALL ACC
+                    </Typography>
+                  </Box>
+                )}
+                
+                {selectedColumns.bet_deviance && (
+                  <Box flex="0 0 80px" sx={{ textAlign: 'center' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: '#00d4ff' }}>
+                      BET DEV
+                    </Typography>
+                  </Box>
+                )}
+                
+                {selectedColumns.tilt_factor && (
+                  <Box flex="0 0 80px" sx={{ textAlign: 'center' }}>
+                    <Typography variant="caption" sx={{ fontWeight: 600, color: '#00d4ff' }}>
+                      TILT
+                    </Typography>
+                  </Box>
+                )}
               </Box>
 
               {/* Virtual Table Body */}
@@ -610,26 +708,30 @@ function Dashboard() {
           </Typography>
           <FormGroup>
             {availableColumns.map(column => (
-              <FormControlLabel
-                key={column.key}
-                control={
-                  <Checkbox
-                    checked={selectedColumns[column.key]}
-                    onChange={() => handleColumnToggle(column.key)}
-                    disabled={
-                      !selectedColumns[column.key] && 
-                      Object.values(selectedColumns).filter(v => v).length >= 4
-                    }
-                    sx={{
-                      color: '#00d4ff',
-                      '&.Mui-checked': {
+              <Box key={column.key} sx={{ mb: 2 }}>
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      checked={selectedColumns[column.key]}
+                      onChange={() => handleColumnToggle(column.key)}
+                      sx={{
                         color: '#00d4ff',
-                      },
-                    }}
-                  />
-                }
-                label={column.label}
-              />
+                        '&.Mui-checked': {
+                          color: '#00d4ff',
+                        },
+                      }}
+                    />
+                  }
+                  label={
+                    <Box>
+                      <Typography variant="body1">{column.label}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {column.description}
+                      </Typography>
+                    </Box>
+                  }
+                />
+              </Box>
             ))}
           </FormGroup>
         </DialogContent>

@@ -102,8 +102,20 @@ def ensure_schema(con: sqlite3.Connection):
 
 def parse_blinds(s: str | None):
     if not s: return None
-    hi = int(s.split("b")[-1])
-    return hi / 100 if hi > 1_000_000 else float(hi)
+    # Hantera fall där blinds innehåller kolon (t.ex. "500:83")
+    if ":" in s:
+        # Ta bara första delen före kolon
+        s = s.split(":")[0]
+    try:
+        # Hantera fall med "b" i strängen (t.ex. "100b")
+        if "b" in s.lower():
+            hi = int(s.split("b")[-1])
+        else:
+            hi = int(s)
+        return hi / 100 if hi > 1_000_000 else float(hi)
+    except (ValueError, TypeError) as e:
+        logger.warning(f"Kunde inte parsa blinds '{s}': {e}")
+        return None
 
 def bulk_from_objects(con: sqlite3.Connection, hands: Iterable[dict[str, Any]]):
     ensure_schema(con)

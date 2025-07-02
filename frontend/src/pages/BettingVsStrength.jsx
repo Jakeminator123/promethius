@@ -330,7 +330,6 @@ function BettingVsStrength() {
     const filteredIntentionData = data.filter(point => 
       point.intention === intention.intention
     )
-    console.log('Filtering by intention:', intention.intention, filteredIntentionData)
     // You could set a filter state here to highlight these points
   }
 

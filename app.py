@@ -207,13 +207,17 @@ async def get_dashboard_data():
             else:
                 raise
         
-        # Get top 25 players from materialized table
+        # Get top 25 players - use materialized table if available, else fallback
         try:
             top_players = top_players_new(25)
         except sqlite3.OperationalError as e:
             if "no such table: top25_players" in str(e):
-                log.warning("top25_players table not yet created - returning empty list")
-                top_players = []
+                log.warning("top25_players table not yet created - using fallback query")
+                try:
+                    top_players = get_top_players_table(25)
+                except Exception as fallback_error:
+                    log.error(f"Fallback query also failed: {fallback_error}")
+                    top_players = []
             else:
                 raise
         
