@@ -308,8 +308,8 @@ const AdvancedComparison = () => {
               <FormControl fullWidth>
                 <InputLabel>Primary Target *</InputLabel>
                 <Select
-                  value={selectedPlayer}
-                  onChange={(e) => setSelectedPlayer(e.target.value)}
+              value={selectedPlayer}
+              onChange={(e) => setSelectedPlayer(e.target.value)}
                   label="Primary Target *"
                   sx={{
                     '& .MuiOutlinedInput-notchedOutline': {
@@ -321,9 +321,9 @@ const AdvancedComparison = () => {
                   }}
                 >
                   <MenuItem value="">Select a player...</MenuItem>
-                  {players.map(player => (
+              {players.map(player => (
                     <MenuItem key={player.player_id} value={player.player_id}>
-                      {player.nickname || player.player_id} ({player.hands_played} hands)
+                  {player.nickname || player.player_id} ({player.hands_played} hands)
                     </MenuItem>
                   ))}
                 </Select>
@@ -334,8 +334,8 @@ const AdvancedComparison = () => {
               <FormControl fullWidth>
                 <InputLabel>Compare With (Optional)</InputLabel>
                 <Select
-                  value={comparisonPlayer}
-                  onChange={(e) => setComparisonPlayer(e.target.value)}
+              value={comparisonPlayer}
+              onChange={(e) => setComparisonPlayer(e.target.value)}
                   label="Compare With (Optional)"
                   sx={{
                     '& .MuiOutlinedInput-notchedOutline': {
@@ -347,9 +347,9 @@ const AdvancedComparison = () => {
                   }}
                 >
                   <MenuItem value="">No comparison...</MenuItem>
-                  {players.filter(p => p.player_id !== selectedPlayer).map(player => (
+              {players.filter(p => p.player_id !== selectedPlayer).map(player => (
                     <MenuItem key={player.player_id} value={player.player_id}>
-                      {player.nickname || player.player_id} ({player.hands_played} hands)
+                  {player.nickname || player.player_id} ({player.hands_played} hands)
                     </MenuItem>
                   ))}
                 </Select>
@@ -378,7 +378,7 @@ const AdvancedComparison = () => {
             <Box display="flex" alignItems="center" gap={2}>
               <FilterIcon sx={{ color: '#00d4ff', fontSize: 28 }} />
               <Typography variant="h6" sx={{ fontWeight: 600, color: '#00d4ff' }}>
-                Segment Filters
+            Segment Filters
               </Typography>
               {getActiveFiltersCount() > 0 && (
                 <Chip
@@ -396,87 +396,87 @@ const AdvancedComparison = () => {
               <Button
                 size="small"
                 startIcon={<ClearIcon />}
-                onClick={clearFilters}
+              onClick={clearFilters}
                 sx={{ color: '#ff4757' }}
-              >
-                Clear all filters
+            >
+              Clear all filters
               </Button>
-            )}
+          )}
           </Box>
 
           <Grid container spacing={2}>
-            {/* Street Filter */}
+          {/* Street Filter */}
             <Grid item xs={12} sm={6} md={4}>
               <FormControl fullWidth size="small">
                 <InputLabel>Street</InputLabel>
                 <Select
-                  value={filters.street || ''}
-                  onChange={(e) => handleFilterChange('street', e.target.value)}
+              value={filters.street || ''}
+              onChange={(e) => handleFilterChange('street', e.target.value)}
                   label="Street"
-                >
+            >
                   <MenuItem value="">All streets</MenuItem>
-                  {availableFilters.streets?.map(street => (
+              {availableFilters.streets?.map(street => (
                     <MenuItem key={street} value={street}>{street}</MenuItem>
-                  ))}
+              ))}
                 </Select>
               </FormControl>
             </Grid>
 
-            {/* Position Filter */}
+          {/* Position Filter */}
             <Grid item xs={12} sm={6} md={4}>
               <FormControl fullWidth size="small">
                 <InputLabel>Position</InputLabel>
                 <Select
-                  value={filters.position || ''}
-                  onChange={(e) => handleFilterChange('position', e.target.value)}
+              value={filters.position || ''}
+              onChange={(e) => handleFilterChange('position', e.target.value)}
                   label="Position"
-                >
+            >
                   <MenuItem value="">All positions</MenuItem>
-                  {availableFilters.positions?.map(pos => (
+              {availableFilters.positions?.map(pos => (
                     <MenuItem key={pos} value={pos}>{pos}</MenuItem>
-                  ))}
+              ))}
                 </Select>
               </FormControl>
             </Grid>
 
-            {/* Action Label Filter */}
+          {/* Action Label Filter */}
             <Grid item xs={12} sm={6} md={4}>
               <FormControl fullWidth size="small">
                 <InputLabel>Action</InputLabel>
                 <Select
-                  value={filters.action_label || ''}
-                  onChange={(e) => handleFilterChange('action_label', e.target.value)}
+              value={filters.action_label || ''}
+              onChange={(e) => handleFilterChange('action_label', e.target.value)}
                   label="Action"
-                >
+            >
                   <MenuItem value="">All actions</MenuItem>
-                  {availableFilters.action_labels?.map(action => (
+              {availableFilters.action_labels?.map(action => (
                     <MenuItem key={action} value={action}>{action}</MenuItem>
-                  ))}
+              ))}
                 </Select>
               </FormControl>
             </Grid>
 
-            {/* J-Score Range */}
+          {/* J-Score Range */}
             <Grid item xs={12} md={8}>
               <Typography variant="body2" color="text.secondary" gutterBottom>
                 J-Score Range
               </Typography>
               <Box display="flex" gap={2} alignItems="center">
                 <TextField
-                  type="number"
-                  placeholder="Min"
-                  value={filters.min_j_score || ''}
-                  onChange={(e) => handleFilterChange('min_j_score', e.target.value)}
+                type="number"
+                placeholder="Min"
+                value={filters.min_j_score || ''}
+                onChange={(e) => handleFilterChange('min_j_score', e.target.value)}
                   size="small"
                   fullWidth
                   inputProps={{ min: 0, max: 100 }}
                 />
                 <Typography color="text.secondary">-</Typography>
                 <TextField
-                  type="number"
-                  placeholder="Max"
-                  value={filters.max_j_score || ''}
-                  onChange={(e) => handleFilterChange('max_j_score', e.target.value)}
+                type="number"
+                placeholder="Max"
+                value={filters.max_j_score || ''}
+                onChange={(e) => handleFilterChange('max_j_score', e.target.value)}
                   size="small"
                   fullWidth
                   inputProps={{ min: 0, max: 100 }}
@@ -484,17 +484,17 @@ const AdvancedComparison = () => {
               </Box>
             </Grid>
 
-            {/* Pot Type */}
+          {/* Pot Type */}
             <Grid item xs={12} sm={6} md={4}>
               <FormControl fullWidth size="small">
                 <InputLabel>Pot Type</InputLabel>
                 <Select
-                  value={filters.pot_type || ''}
-                  onChange={(e) => handleFilterChange('pot_type', e.target.value)}
+              value={filters.pot_type || ''}
+              onChange={(e) => handleFilterChange('pot_type', e.target.value)}
                   label="Pot Type"
-                >
+            >
                   <MenuItem value="">All pot types</MenuItem>
-                  {availableFilters.pot_types?.map(type => (
+              {availableFilters.pot_types?.map(type => (
                     <MenuItem key={type} value={type}>{type}</MenuItem>
                   ))}
                 </Select>
@@ -503,7 +503,7 @@ const AdvancedComparison = () => {
           </Grid>
 
           <AnimatePresence>
-            {expandedInfo && (
+          {expandedInfo && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
@@ -518,20 +518,20 @@ const AdvancedComparison = () => {
                     </Typography>
                     <Box display="flex" gap={2} alignItems="center">
                       <TextField
-                        type="number"
-                        placeholder="Min"
-                        value={filters.min_preflop_score || ''}
-                        onChange={(e) => handleFilterChange('min_preflop_score', e.target.value)}
+                    type="number"
+                    placeholder="Min"
+                    value={filters.min_preflop_score || ''}
+                    onChange={(e) => handleFilterChange('min_preflop_score', e.target.value)}
                         size="small"
                         fullWidth
                         inputProps={{ min: 0, max: 100 }}
                       />
                       <Typography color="text.secondary">-</Typography>
                       <TextField
-                        type="number"
-                        placeholder="Max"
-                        value={filters.max_preflop_score || ''}
-                        onChange={(e) => handleFilterChange('max_preflop_score', e.target.value)}
+                    type="number"
+                    placeholder="Max"
+                    value={filters.max_preflop_score || ''}
+                    onChange={(e) => handleFilterChange('max_preflop_score', e.target.value)}
                         size="small"
                         fullWidth
                         inputProps={{ min: 0, max: 100 }}
@@ -543,12 +543,12 @@ const AdvancedComparison = () => {
                     <FormControl fullWidth size="small">
                       <InputLabel>Size Category</InputLabel>
                       <Select
-                        value={filters.size_cat || ''}
-                        onChange={(e) => handleFilterChange('size_cat', e.target.value)}
+                  value={filters.size_cat || ''}
+                  onChange={(e) => handleFilterChange('size_cat', e.target.value)}
                         label="Size Category"
-                      >
+                >
                         <MenuItem value="">All sizes</MenuItem>
-                        {availableFilters.size_categories?.map(size => (
+                  {availableFilters.size_categories?.map(size => (
                           <MenuItem key={size} value={size}>{size}</MenuItem>
                         ))}
                       </Select>
@@ -563,17 +563,17 @@ const AdvancedComparison = () => {
             <Button
               size="small"
               startIcon={expandedInfo ? <ChevronUpIcon /> : <ChevronDownIcon />}
-              onClick={() => setExpandedInfo(!expandedInfo)}
+            onClick={() => setExpandedInfo(!expandedInfo)}
               sx={{ color: '#00d4ff' }}
-            >
-              {expandedInfo ? 'Show fewer filters' : 'Show more filters'}
+          >
+            {expandedInfo ? 'Show fewer filters' : 'Show more filters'}
             </Button>
-            
+          
             <Button
               variant="contained"
               startIcon={loading ? <CircularProgress size={16} /> : <SearchIcon />}
-              onClick={fetchSegmentData}
-              disabled={!selectedPlayer || loading}
+            onClick={fetchSegmentData}
+            disabled={!selectedPlayer || loading}
               sx={{
                 background: 'linear-gradient(135deg, #00d4ff 0%, #00a8cc 100%)',
                 '&:hover': {
@@ -592,13 +592,13 @@ const AdvancedComparison = () => {
 
       {/* Results */}
       <AnimatePresence>
-        {segmentData && (
+      {segmentData && (
           <motion.div
             variants={containerVariants}
             initial="hidden"
             animate="visible"
           >
-            {/* Comparison Stats */}
+          {/* Comparison Stats */}
             <motion.div variants={itemVariants}>
               <Paper 
                 sx={{ 
@@ -617,7 +617,7 @@ const AdvancedComparison = () => {
                 </Box>
 
                 <Grid container spacing={3}>
-                  {/* Player Stats */}
+              {/* Player Stats */}
                   <Grid item xs={12} md={4}>
                     <motion.div whileHover={{ scale: 1.02 }}>
                       <Card
@@ -647,7 +647,7 @@ const AdvancedComparison = () => {
                               }}
                             />
                           </Box>
-                          {segmentData.player_stats.action_count > 0 ? (
+                {segmentData.player_stats.action_count > 0 ? (
                             <Stack spacing={2}>
                               {[
                                 { label: 'Actions', value: segmentData.player_stats.action_count },
@@ -673,7 +673,7 @@ const AdvancedComparison = () => {
                     </motion.div>
                   </Grid>
 
-                  {/* Population Average */}
+              {/* Population Average */}
                   <Grid item xs={12} md={4}>
                     <motion.div whileHover={{ scale: 1.02 }}>
                       <Card
@@ -685,9 +685,9 @@ const AdvancedComparison = () => {
                       >
                         <CardContent>
                           <Typography variant="h6" sx={{ color: '#00ff88', fontWeight: 600, mb: 2 }}>
-                            Population Average
+                  Population Average
                           </Typography>
-                          {segmentData.population_stats.total_actions > 0 ? (
+                {segmentData.population_stats.total_actions > 0 ? (
                             <Stack spacing={2}>
                               {[
                                 { label: 'Total Actions', value: segmentData.population_stats.total_actions },
@@ -713,8 +713,8 @@ const AdvancedComparison = () => {
                     </motion.div>
                   </Grid>
 
-                  {/* Comparison Player */}
-                  {comparisonPlayer && (
+              {/* Comparison Player */}
+              {comparisonPlayer && (
                     <Grid item xs={12} md={4}>
                       <motion.div whileHover={{ scale: 1.02 }}>
                         <Card
@@ -744,7 +744,7 @@ const AdvancedComparison = () => {
                                 }}
                               />
                             </Box>
-                            {segmentData.comparison_stats?.action_count > 0 ? (
+                  {segmentData.comparison_stats?.action_count > 0 ? (
                               <Stack spacing={2}>
                                 {[
                                   { label: 'Actions', value: segmentData.comparison_stats.action_count },
@@ -772,8 +772,8 @@ const AdvancedComparison = () => {
                   )}
                 </Grid>
 
-                {/* Performance vs Average */}
-                {segmentData.player_stats.action_count > 0 && segmentData.population_stats.avg_j_score > 0 && (
+            {/* Performance vs Average */}
+            {segmentData.player_stats.action_count > 0 && segmentData.population_stats.avg_j_score > 0 && (
                   <motion.div variants={itemVariants}>
                     <Box 
                       sx={{ 
@@ -850,8 +850,8 @@ const AdvancedComparison = () => {
               </Paper>
             </motion.div>
 
-            {/* Top Players in Segment */}
-            {distribution.length > 0 && (
+          {/* Top Players in Segment */}
+          {distribution.length > 0 && (
               <motion.div variants={itemVariants}>
                 <Paper 
                   sx={{ 
@@ -881,7 +881,7 @@ const AdvancedComparison = () => {
                         </TableRow>
                       </TableHead>
                       <TableBody>
-                        {distribution.slice(0, 10).map((item, idx) => (
+                    {distribution.slice(0, 10).map((item, idx) => (
                           <TableRow
                             key={idx}
                             component={motion.tr}
@@ -916,10 +916,10 @@ const AdvancedComparison = () => {
                   </TableContainer>
                 </Paper>
               </motion.div>
-            )}
+          )}
 
-            {/* Sample Hands */}
-            {segmentHands.length > 0 && (
+          {/* Sample Hands */}
+          {segmentHands.length > 0 && (
               <motion.div variants={itemVariants}>
                 <Paper 
                   sx={{ 
@@ -937,7 +937,7 @@ const AdvancedComparison = () => {
                   </Box>
                   
                   <Stack spacing={2}>
-                    {segmentHands.map((hand, idx) => (
+                {segmentHands.map((hand, idx) => (
                       <motion.div
                         key={idx}
                         initial={{ opacity: 0, y: 10 }}
@@ -988,34 +988,34 @@ const AdvancedComparison = () => {
                             <Grid item xs={6} sm={3}>
                               <Typography variant="caption" color="text.secondary">Won:</Typography>
                               <Typography variant="body2" sx={{ fontWeight: 600, color: hand.money_won > 0 ? '#00ff88' : '#ff4757' }}>
-                                {hand.money_won > 0 ? '+' : ''}{formatNumber(hand.money_won)}
+                          {hand.money_won > 0 ? '+' : ''}{formatNumber(hand.money_won)}
                               </Typography>
                             </Grid>
                           </Grid>
                           
-                          {hand.holecards && (
+                    {hand.holecards && (
                             <Box mt={2}>
                               <Typography variant="caption" color="text.secondary">Cards:</Typography>
                               <Typography variant="body2" sx={{ fontFamily: 'monospace', ml: 1 }}>
                                 {hand.holecards}
-                                {hand.board_cards && (
-                                  <>
+                        {hand.board_cards && (
+                          <>
                                     <span style={{ color: 'text.secondary', margin: '0 8px' }}>|</span>
                                     {hand.board_cards}
-                                  </>
-                                )}
+                          </>
+                        )}
                               </Typography>
                             </Box>
-                          )}
+                    )}
                         </Card>
                       </motion.div>
-                    ))}
+                ))}
                   </Stack>
                 </Paper>
               </motion.div>
-            )}
+          )}
           </motion.div>
-        )}
+      )}
       </AnimatePresence>
     </Box>
   );

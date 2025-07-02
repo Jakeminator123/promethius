@@ -85,6 +85,13 @@ const ACTION_COLORS = {
   'cont': '#45aaf2'
 }
 
+// Common Paper styling
+const paperStyle = {
+  background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.9) 0%, rgba(17, 24, 39, 0.7) 100%)',
+  backdropFilter: 'blur(10px)',
+  border: '1px solid rgba(255, 255, 255, 0.05)',
+}
+
 // Animation variants
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -355,8 +362,13 @@ function BettingVsStrength() {
             {data.nickname || data.player_id}
           </Typography>
           <Typography variant="body2">
-            <strong>Hand Strength:</strong> {data.hand_strength}
+            <strong>Hand Strength:</strong> {data.hand_strength} (Real hand value)
           </Typography>
+          {data.j_score && (
+            <Typography variant="body2">
+              <strong>Decision Quality:</strong> {data.j_score} (J-Score)
+            </Typography>
+          )}
           <Typography variant="body2">
             <strong>Bet Size:</strong> {data.bet_size_pct}% of pot
           </Typography>
@@ -366,6 +378,11 @@ function BettingVsStrength() {
           <Typography variant="body2">
             <strong>Action:</strong> {data.action_label}
           </Typography>
+          {data.holecards && (
+            <Typography variant="body2">
+              <strong>Cards:</strong> {data.holecards}
+            </Typography>
+          )}
           <Typography variant="body2" color="text.secondary">
             Hand: {data.hand_id}
           </Typography>
@@ -407,20 +424,43 @@ function BettingVsStrength() {
 
   return (
     <Box>
-      <Typography variant="h4" gutterBottom>
-        Betting Size vs Hand Strength Analysis
-      </Typography>
-      <Typography variant="subtitle1" color="text.secondary" gutterBottom>
-        Comprehensive poker analysis with betting patterns, player stats, and hand history
-      </Typography>
+      <motion.div
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+      >
+        <Typography 
+          variant="h4" 
+          gutterBottom
+          sx={{
+            fontWeight: 700,
+            background: 'linear-gradient(135deg, #00d4ff 0%, #00ff88 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}
+        >
+          Betting Size vs Hand Strength Analysis
+        </Typography>
+        <Typography variant="subtitle1" sx={{ color: 'text.secondary', mb: 3 }}>
+          Comprehensive poker analysis with betting patterns, player stats, and hand history
+        </Typography>
+      </motion.div>
 
       {/* Player Information Section */}
       {filters.player && (
-        <Paper sx={{ p: 3, mt: 3, mb: 3, backgroundColor: '#f8f9fa', border: '1px solid #e0e0e0' }}>
+        <Paper sx={{ 
+          p: 3, 
+          mt: 3, 
+          mb: 3, 
+          background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.9) 0%, rgba(17, 24, 39, 0.7) 100%)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(255, 255, 255, 0.05)',
+        }}>
           <Box display="flex" alignItems="center" gap={2}>
-            <PersonIcon color="primary" sx={{ fontSize: 32 }} />
+            <PersonIcon sx={{ fontSize: 32, color: '#00d4ff' }} />
             <Box>
-              <Typography variant="h5" color="primary">
+              <Typography variant="h5" sx={{ color: '#00d4ff', fontWeight: 600 }}>
                 {filters.player}
               </Typography>
               <Typography variant="body2" color="text.secondary">
@@ -432,7 +472,13 @@ function BettingVsStrength() {
       )}
 
       {/* Compact Filters Section */}
-      <Paper sx={{ p: 2, mt: 2 }}>
+      <Paper sx={{ 
+        p: 2, 
+        mt: 2,
+        background: 'linear-gradient(135deg, rgba(17, 24, 39, 0.9) 0%, rgba(17, 24, 39, 0.7) 100%)',
+        backdropFilter: 'blur(10px)',
+        border: '1px solid rgba(255, 255, 255, 0.05)',
+      }}>
         <Grid container spacing={2} alignItems="center">
           <Grid item xs={12} md={3}>
             <TextField
@@ -507,22 +553,36 @@ function BettingVsStrength() {
             <Grid item xs={12} md={3}>
               {/* Top Opponents */}
               {filters.player && topOpponents.length > 0 && (
-                <Paper sx={{ p: 2, mb: 2 }}>
-                  <Typography variant="h6" gutterBottom>
+                <Paper sx={{ ...paperStyle, p: 2, mb: 2 }}>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#00d4ff' }}>
                     Top Opponents
                   </Typography>
                   {topOpponents.map((opponent, index) => (
-                    <Box key={opponent.player_id} sx={{ mb: 1, p: 1.5, backgroundColor: '#f5f5f5', borderRadius: 1 }}>
-                      <Typography variant="subtitle2" color="primary">
+                    <Box key={opponent.player_id} sx={{ 
+                      mb: 1, 
+                      p: 1.5, 
+                      background: 'rgba(0, 212, 255, 0.05)',
+                      border: '1px solid rgba(0, 212, 255, 0.2)',
+                      borderRadius: 1,
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        background: 'rgba(0, 212, 255, 0.1)',
+                        borderColor: 'rgba(0, 212, 255, 0.3)',
+                      }
+                    }}>
+                      <Typography variant="subtitle2" sx={{ color: '#00d4ff', fontWeight: 600 }}>
                         #{index + 1} {opponent.nickname || opponent.player_id}
                       </Typography>
-                      <Typography variant="caption" display="block">
+                      <Typography variant="caption" display="block" color="text.secondary">
                         {opponent.hands_together} hands
                       </Typography>
-                      <Typography variant="caption" display="block">
+                      <Typography variant="caption" display="block" color="text.secondary">
                         You {opponent.player_avg_score} vs {opponent.opponent_avg_score}
                       </Typography>
-                      <Typography variant="caption" color={opponent.score_diff > 0 ? 'success.main' : 'error.main'}>
+                      <Typography variant="caption" sx={{ 
+                        color: opponent.score_diff > 0 ? '#00ff88' : '#ff4757',
+                        fontWeight: 600 
+                      }}>
                         {opponent.score_diff > 0 ? '+' : ''}{opponent.score_diff}
                       </Typography>
                     </Box>
@@ -531,8 +591,8 @@ function BettingVsStrength() {
               )}
 
               {/* Summary Stats */}
-              <Paper sx={{ p: 2, mb: 2 }}>
-                <Typography variant="h6" gutterBottom>
+              <Paper sx={{ ...paperStyle, p: 2, mb: 2 }}>
+                <Typography variant="h6" gutterBottom sx={{ color: '#00d4ff' }}>
                   Summary
                 </Typography>
                 <Grid container spacing={1}>
@@ -565,8 +625,8 @@ function BettingVsStrength() {
 
               {/* Detailed Player Stats */}
               {filters.player && detailedStats && Object.keys(detailedStats).length > 0 && (
-                <Paper sx={{ p: 2, mb: 2 }}>
-                  <Typography variant="h6" gutterBottom>
+                <Paper sx={{ ...paperStyle, p: 2, mb: 2 }}>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#00d4ff' }}>
                     Player Stats
                   </Typography>
                   {loadingStats ? (
@@ -611,8 +671,8 @@ function BettingVsStrength() {
 
               {/* Recent Hands */}
               {filters.player && (
-                <Paper sx={{ p: 2 }}>
-                  <Typography variant="h6" gutterBottom>
+                <Paper sx={{ ...paperStyle, p: 2 }}>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#00d4ff', display: 'flex', alignItems: 'center' }}>
                     <HistoryIcon sx={{ mr: 1, fontSize: 18 }} />
                     Recent Hands (20)
                   </Typography>
@@ -662,7 +722,7 @@ function BettingVsStrength() {
 
             {/* Middle Column - Scatter Chart (42%) */}
             <Grid item xs={12} md={5}>
-              <Paper sx={{ p: 2 }}>
+              <Paper sx={{ ...paperStyle, p: 2 }}>
                 {/* Street Filter Buttons */}
                 <Box sx={{ mb: 2, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                   {['all', 'preflop', 'flop', 'turn', 'river'].map((street) => (
@@ -678,7 +738,7 @@ function BettingVsStrength() {
                   ))}
                 </Box>
 
-                <Typography variant="h6" gutterBottom>
+                <Typography variant="h6" gutterBottom sx={{ color: '#00d4ff' }}>
                   Betting Size vs Hand Strength
                 </Typography>
                 <Typography variant="body2" color="text.secondary" gutterBottom>
@@ -692,25 +752,34 @@ function BettingVsStrength() {
                       margin={{ top: 10, right: 20, bottom: 30, left: 20 }}
                       onClick={handleChartClick}
                     >
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
                       <XAxis 
                         type="number" 
                         dataKey="x" 
                         name="Hand Strength" 
                         domain={[0, 100]}
-                        label={{ value: 'Hand Strength', position: 'insideBottom', offset: -15 }}
-                        tick={{ fontSize: 12 }}
+                        label={{ value: 'Hand Strength', position: 'insideBottom', offset: -15, style: { fill: '#9ca3af' } }}
+                        tick={{ fontSize: 12, fill: '#9ca3af' }}
+                        stroke="rgba(255, 255, 255, 0.2)"
                       />
                       <YAxis 
                         type="number" 
                         dataKey="y" 
                         name="Bet Size %" 
                         domain={[0, 150]}
-                        label={{ value: 'Bet Size (%)', angle: -90, position: 'insideLeft' }}
-                        tick={{ fontSize: 12 }}
+                        label={{ value: 'Bet Size (%)', angle: -90, position: 'insideLeft', style: { fill: '#9ca3af' } }}
+                        tick={{ fontSize: 12, fill: '#9ca3af' }}
+                        stroke="rgba(255, 255, 255, 0.2)"
                       />
                       <RechartsTooltip content={<CustomTooltip />} />
-                      <Scatter data={chartData} />
+                      <Scatter 
+                        data={chartData} 
+                        fill="#00d4ff"
+                        shape={(props) => {
+                          const { cx, cy, fill } = props
+                          return <circle cx={cx} cy={cy} r={5} fill={fill} fillOpacity={0.8} stroke={fill} strokeWidth={1} />
+                        }}
+                      />
                     </ScatterChart>
                   </ResponsiveContainer>
                 </Box>
@@ -741,8 +810,8 @@ function BettingVsStrength() {
             {/* Right Column - Radar Chart (33%) */}
             <Grid item xs={12} md={4}>
               {filters.player && playerIntentions.length > 0 ? (
-                <Paper sx={{ p: 2 }}>
-                  <Typography variant="h6" gutterBottom>
+                <Paper sx={{ ...paperStyle, p: 2 }}>
+                  <Typography variant="h6" gutterBottom sx={{ color: '#00d4ff' }}>
                     Player Intentions Radar
                   </Typography>
                   <Typography variant="caption" color="text.secondary" gutterBottom display="block">
@@ -794,8 +863,14 @@ function BettingVsStrength() {
                           mb: 0.5, 
                           p: 0.5, 
                           cursor: 'pointer',
-                          '&:hover': { backgroundColor: '#f5f5f5' },
-                          borderRadius: 0.5
+                          background: 'rgba(0, 212, 255, 0.05)',
+                          border: '1px solid transparent',
+                          '&:hover': { 
+                            background: 'rgba(0, 212, 255, 0.1)',
+                            borderColor: 'rgba(0, 212, 255, 0.3)',
+                          },
+                          borderRadius: 0.5,
+                          transition: 'all 0.3s ease'
                         }}
                         onClick={() => handleIntentionClick(intention)}
                       >
