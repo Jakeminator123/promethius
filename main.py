@@ -433,10 +433,16 @@ def start_render_environment(
         print("🔄 Startar scraping i bakgrund...")
         time.sleep(15)  # Låt webservern starta först
         
-        run_scraping_loop(
-            start_date, url, db, sleep_s, skip_scripts, 
-            no_scripts, no_clean, in_thread=True
-        )
+        try:
+            run_scraping_loop(
+                start_date, url, db, sleep_s, skip_scripts, 
+                no_scripts, no_clean, in_thread=True
+            )
+        except Exception as e:
+            print(f"❌ KRITISKT FEL i scraping-tråd: {e}")
+            import traceback
+            traceback.print_exc()
+            print("⚠️  Scraping-tråden dog! Webservern fortsätter köra men ingen ny data hämtas.")
     
     # Starta scraping i bakgrundsthread
     scraping_thread = threading.Thread(target=run_scraping_background, daemon=True)

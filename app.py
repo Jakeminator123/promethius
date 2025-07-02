@@ -33,6 +33,7 @@ from queries import (
 from queries.dashboard_queries import dash_summary_new, player_row_new, player_rows_new, top_players_new
 from queries.player_queries import get_player_detailed_stats as get_detailed_player_stats
 from queries.db_connection import execute_query
+import sqlite3
 
 # Setup logging
 logging.basicConfig(
@@ -91,6 +92,40 @@ async def health_check():
         "message": "Database ready for queries" if db_ready else "Database still being built - scraping in progress"
     }
 
+@app.post("/api/create-materialized-tables")
+async def create_materialized_tables_endpoint():
+    """Manually trigger creation of materialized tables"""
+    try:
+        import subprocess
+        import sys
+        from pathlib import Path
+        from utils.paths import HEAVY_DB
+        
+        script_path = Path(__file__).parent / "scrape_hh" / "scripts" / "8_materialise_dashboard.py"
+        if not script_path.exists():
+            return {"success": False, "error": "Script 8 not found"}
+        
+        result = subprocess.run(
+            [sys.executable, str(script_path), "--db", str(HEAVY_DB)], 
+            capture_output=True, text=True
+        )
+        
+        if result.returncode == 0:
+            return {
+                "success": True, 
+                "message": "Materialized tables created successfully",
+                "output": result.stdout
+            }
+        else:
+            return {
+                "success": False, 
+                "error": result.stderr,
+                "output": result.stdout
+            }
+    except Exception as e:
+        log.error(f"Error creating materialized tables: {e}")
+        return {"success": False, "error": str(e)}
+
 @app.post("/api/login", response_model=LoginResponse)
 async def login(request: LoginRequest):
     """Authentication endpoint"""
@@ -140,15 +175,32 @@ async def get_dashboard_data():
                 
                 script_path = Path(__file__).parent / "scrape_hh" / "scripts" / "8_materialise_dashboard.py"
                 if script_path.exists():
-                    result = subprocess.run([sys.executable, str(script_path)], 
-                                          capture_output=True, text=True)
+                    # Use the correct database path from utils.paths
+                    from utils.paths import HEAVY_DB
+                    result = subprocess.run(
+                        [sys.executable, str(script_path), "--db", str(HEAVY_DB)], 
+                        capture_output=True, text=True
+                    )
                     if result.returncode == 0:
                         log.info("Materialized tables created successfully")
                         # Try again
                         summary = dash_summary_new()
                     else:
                         log.error(f"Failed to create materialized tables: {result.stderr}")
-                        raise
+                        # Return empty data instead of crashing
+                        return {
+                            "total_players": 0,
+                            "total_hands": 0,
+                            "avg_vpip": 0,
+                            "avg_pfr": 0,
+                            "avg_j_score": 0,
+                            "avg_preflop_score": 0,
+                            "avg_postflop_score": 0,
+                            "total_actions": 0,
+                            "top_players": [],
+                            "database_status": "materializing",
+                            "message": "Creating summary tables, please wait..."
+                        }
                 else:
                     log.error(f"Script 8 not found at {script_path}")
                     raise
@@ -156,7 +208,14 @@ async def get_dashboard_data():
                 raise
         
         # Get top 25 players from materialized table
-        top_players = top_players_new(25)
+        try:
+            top_players = top_players_new(25)
+        except sqlite3.OperationalError as e:
+            if "no such table: top25_players" in str(e):
+                log.warning("top25_players table not yet created - returning empty list")
+                top_players = []
+            else:
+                raise
         
         return {
             "total_players": summary.get('total_players', 0),

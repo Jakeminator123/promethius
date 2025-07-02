@@ -163,4 +163,7 @@ if __name__ == "__main__":
         run_web_server()
     except KeyboardInterrupt:
         print("\n⏹️  Avslutar gracefully...")
-        signal_handler(signal.SIGINT, None) 
+        signal_handler(signal.SIGINT, None)
+
+# Kör main.py med --no-scripts för att undvika timeouts på Render
+subprocess.run([sys.executable, "main.py", "--no-scripts"]) 

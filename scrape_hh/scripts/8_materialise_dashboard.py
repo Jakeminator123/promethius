@@ -261,8 +261,15 @@ def rebuild_tables(con: sqlite3.Connection) -> None:
         if 'preflop_score' not in columns or 'postflop_score' not in columns:
             log.warning("Missing preflop_score or postflop_score columns in actions table")
             log.warning("Script 7 might not have completed successfully")
-            # Fortsätt ändå för att skapa tabellerna med NULL-värden
+            log.info("Will use NULL values for missing score columns")
         
+    except sqlite3.OperationalError as e:
+        if "no such table: actions" in str(e):
+            log.error("Actions table does not exist - database not built yet")
+            raise
+        else:
+            log.error(f"Database error: {e}")
+            raise
     except Exception as e:
         log.error(f"Error checking actions table: {e}")
         raise
@@ -279,9 +286,35 @@ def rebuild_tables(con: sqlite3.Connection) -> None:
     # 2. top25_players -------------------------------------------------------
     try:
         cur.executescript("DROP TABLE IF EXISTS top25_players;")
-        cur.execute(f"CREATE TABLE top25_players AS {TOP_PLAYERS_SQL_FMT.format(limit=25)}")
+        
+        # Check if we have data first
+        count_check = cur.execute("SELECT COUNT(*) FROM actions WHERE player_id IS NOT NULL").fetchone()[0]
+        
+        if count_check > 0:
+            cur.execute(f"CREATE TABLE top25_players AS {TOP_PLAYERS_SQL_FMT.format(limit=25)}")
+            log.info(f"✅ top25_players created with data from {count_check} actions")
+        else:
+            # Create empty table with correct schema
+            cur.execute("""
+                CREATE TABLE top25_players (
+                    player_id TEXT,
+                    nickname TEXT,
+                    total_hands INTEGER DEFAULT 0,
+                    avg_j_score REAL DEFAULT 0,
+                    vpip REAL DEFAULT 0,
+                    pfr REAL DEFAULT 0,
+                    avg_preflop_score REAL DEFAULT 0,
+                    avg_postflop_score REAL DEFAULT 0,
+                    winrate_bb100 REAL DEFAULT 0,
+                    solver_precision_score REAL DEFAULT 0,
+                    calldown_accuracy REAL DEFAULT 0,
+                    bet_deviance REAL DEFAULT 0,
+                    tilt_factor REAL DEFAULT 0
+                )
+            """)
+            log.info("✅ top25_players created (empty - no player data yet)")
+        
         cur.execute("CREATE INDEX idx_top25_player_id ON top25_players(player_id);")
-        log.info("✅ top25_players created")
     except Exception as e:
         log.error(f"Failed to create top25_players: {e}")
         raise
