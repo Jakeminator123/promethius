@@ -244,17 +244,7 @@ def run_processing_scripts(skip_scripts: List[str] | None = None) -> bool:
     print(f"   ✅ Alla {success_count} scripts klara")
     return True
 
-def run_final_scripts(
-    total_seen: int,
-    no_scripts: bool,
-    skip_scripts: List[str] | None = None
-) -> bool:
-    """Kör processing-scripts en sista gång innan avslut."""
-    if no_scripts or total_seen == 0:
-        return True
-        
-    print("\n🏁 Kör finala processing-scripts för att säkerställa all data är processad...")
-    return run_processing_scripts(skip_scripts)
+
 
 # ────────────────────────────────────────────────────────────────
 # 4. API-klient
@@ -512,9 +502,6 @@ def main() -> None:
         print(f"   ❌ {invalid_hands} ogiltiga händer hoppades över")
     
     print(f"\n📊 Se loggfil för detaljer: {log_file.name}")
-
-    # Kör finala processing-scripts
-    run_final_scripts(total_seen, args.no_scripts, args.skip_scripts)
 
 if __name__ == "__main__":
     main()

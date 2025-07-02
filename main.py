@@ -21,7 +21,6 @@ from pathlib import Path
 import signal
 import threading
 from typing import Any
-import socket
 
 # Import centraliserad path-hantering
 sys.path.append(str(Path(__file__).resolve().parent))
@@ -165,7 +164,7 @@ def handle_first_deploy() -> bool:
         try:
             deploy_time = marker_file.read_text().strip()
             print(f"   {deploy_time}")
-        except:
+        except Exception:
             pass
         return True
     
@@ -314,6 +313,21 @@ def run_single_fetch(
 
     run_fetch_process(date_str, url, db, skip_scripts, no_scripts)
 
+def sleep_with_heartbeat(seconds: int, message: str = "Väntar...") -> None:
+    """Sleep med periodisk loggning för att hålla processen vid liv på Render."""
+    interval = 30  # Logga var 30:e sekund
+    elapsed = 0
+    
+    while elapsed < seconds:
+        remaining = seconds - elapsed
+        sleep_time = min(interval, remaining)
+        
+        if elapsed > 0 and elapsed % 60 == 0:  # Logga varje minut
+            print(f"   ⏱️  {message} ({elapsed//60} av {seconds//60} minuter)")
+        
+        time.sleep(sleep_time)
+        elapsed += sleep_time
+
 # ────────────────────────────────────────────────────────────────
 # Signal handling
 # ────────────────────────────────────────────────────────────────
@@ -322,12 +336,12 @@ def setup_signal_handlers() -> None:
     """Sätter upp signal handlers för graceful shutdown."""
     def signal_handler(signum: int, frame: Any) -> None:
         if IS_RENDER and signum == signal.SIGTERM:
-            print(f"\n🛑 SIGTERM på Render - graceful shutdown...")
+            print("\n🛑 SIGTERM på Render - graceful shutdown...")
             
             try:
                 cleanup_database_locks()
                 print("✅ Databas-cleanup klar")
-            except:
+            except Exception:
                 pass
             
             print("✅ Graceful shutdown klar")
@@ -385,10 +399,11 @@ def run_scraping_loop(
             # Olika väntetider beroende på om vi kommit ikapp dagens datum
             if day == datetime.date.today():
                 print("🕑 Väntar 10 minuter (ikapp dagens datum)...")
-                time.sleep(600)
+                sleep_with_heartbeat(600, "Väntar innan nästa körning")
             else:
                 print(f"🕑 Väntar {sleep_s//60} min...")
-                time.sleep(sleep_s)
+                next_date = day.isoformat()
+                sleep_with_heartbeat(sleep_s, f"Väntar innan {next_date}")
 
         except KeyboardInterrupt:
             print("\n⏹️  Loop avbruten av användare")
