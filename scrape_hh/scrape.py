@@ -182,7 +182,7 @@ def find_processing_scripts() -> List[Path]:
         return []
     
     scripts = []
-    for i in range(1, 10):  # leta efter 1_*.py till 9_*.py
+    for i in range(1, 11):  # leta efter 1_*.py till 10_*.py (inkluderar nu 8_*.py)
         pattern = f"{i}_*.py"
         matches = list(scripts_dir.glob(pattern))
         scripts.extend(matches)

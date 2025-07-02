@@ -37,18 +37,21 @@ DASHBOARD_SQL = """
 SELECT 
     COUNT(DISTINCT player_id)                       AS total_players,
     COUNT(DISTINCT hand_id)                         AS total_hands,
-    AVG(CASE WHEN action!='f' AND street='preflop' THEN 1 ELSE 0 END)*100  AS avg_vpip,
-    AVG(CASE WHEN action='r'  AND street='preflop' THEN 1 ELSE 0 END)*100  AS avg_pfr,
+    ROUND(SUM(CASE WHEN action!='f' AND street='preflop' THEN 1 ELSE 0 END)*100.0 / 
+          NULLIF(SUM(CASE WHEN street='preflop' THEN 1 ELSE 0 END), 0), 1)  AS avg_vpip,
+    ROUND(SUM(CASE WHEN action='r' AND street='preflop' THEN 1 ELSE 0 END)*100.0 / 
+          NULLIF(SUM(CASE WHEN street='preflop' THEN 1 ELSE 0 END), 0), 1)  AS avg_pfr,
     AVG(j_score)                                    AS avg_j_score,
     COUNT(action_order)                             AS total_actions,
-    ROUND(AVG(preflop_score), 1)                    AS avg_preflop_score,
-    ROUND(AVG(postflop_score), 1)                   AS avg_postflop_score
+    ROUND(COALESCE(AVG(preflop_score), AVG(CASE WHEN street='preflop' THEN j_score END)), 1)    AS avg_preflop_score,
+    ROUND(COALESCE(AVG(postflop_score), AVG(CASE WHEN street!='preflop' THEN j_score END)), 1)  AS avg_postflop_score
 FROM actions
 WHERE player_id IS NOT NULL AND player_id!='';
 """
 
 # ---------------------------------------------------------------------------
 # Top‑25 players  – largely same compute as the API, with score columns present
+# NOTE: This is not used anymore, we use TOP_PLAYERS_SQL_FMT instead
 TOP_PLAYERS_SQL = """
 WITH derived AS (
     SELECT 
@@ -56,8 +59,10 @@ WITH derived AS (
         a.nickname,
         COUNT(DISTINCT a.hand_id)                                   AS hands_played,
         AVG(a.j_score)                                              AS avg_j_score,
-        AVG(CASE WHEN a.action!='f' AND a.street='preflop' THEN 1 ELSE 0 END)*100 AS vpip,
-        AVG(CASE WHEN a.action='r'  AND a.street='preflop' THEN 1 ELSE 0 END)*100 AS pfr,
+        ROUND(SUM(CASE WHEN a.action!='f' AND a.street='preflop' THEN 1 ELSE 0 END)*100.0 / 
+              NULLIF(SUM(CASE WHEN a.street='preflop' THEN 1 ELSE 0 END), 0), 1) AS vpip,
+        ROUND(SUM(CASE WHEN a.action='r' AND a.street='preflop' THEN 1 ELSE 0 END)*100.0 / 
+              NULLIF(SUM(CASE WHEN a.street='preflop' THEN 1 ELSE 0 END), 0), 1) AS pfr,
         AVG(a.preflop_score)                                        AS avg_preflop_score,
         AVG(a.postflop_score)                                       AS avg_postflop_score,
         AVG(CASE WHEN a.street='preflop' THEN a.j_score END)        AS preflop_j_score,
@@ -83,20 +88,37 @@ LIMIT 25;
 # ---------------------------------------------------------------------------
 # Player summary – one row / player; mirrors get_player_stats()
 PLAYER_SUMMARY_SQL = """
-SELECT 
-    a.player_id                                                   AS player_id,
-    a.nickname                                                    AS nickname,
-    COUNT(DISTINCT a.hand_id)                                     AS total_hands,
-    COUNT(a.action_order)                                         AS total_actions,
-    AVG(a.j_score)                                                AS avg_j_score,
-    SUM(CASE WHEN a.action!='f' AND a.street='preflop' THEN 1 ELSE 0 END) AS vpip_cnt,
-    SUM(CASE WHEN a.action='r'  AND a.street='preflop' THEN 1 ELSE 0 END) AS pfr_cnt,
-    SUM(CASE WHEN a.street='preflop' THEN 1 END)                 AS preflop_actions,
-    ROUND(AVG(a.preflop_score),1)                                 AS avg_preflop_score,
-    ROUND(AVG(a.postflop_score),1)                                AS avg_postflop_score
-FROM actions a
-WHERE a.player_id IS NOT NULL AND a.player_id!=''
-GROUP BY a.player_id, a.nickname;
+SELECT
+    a.player_id,
+    a.nickname,
+    COUNT(DISTINCT a.hand_id)                           AS hands_played,
+    COUNT(a.action_order)                               AS total_actions,
+    ROUND(AVG(a.j_score),1)                             AS avg_j_score,
+    
+    /* VPIP och PFR - räkna korrekt över alla preflop-actions */
+    ROUND(
+        SUM(CASE WHEN a.action!='f' AND a.street='preflop' THEN 1 ELSE 0 END) * 100.0 /
+        NULLIF(SUM(CASE WHEN a.street='preflop' THEN 1 ELSE 0 END), 0)
+    ,1) AS vpip,
+    
+    ROUND(
+        SUM(CASE WHEN a.action='r' AND a.street='preflop' THEN 1 ELSE 0 END) * 100.0 /
+        NULLIF(SUM(CASE WHEN a.street='preflop' THEN 1 ELSE 0 END), 0)
+    ,1) AS pfr,
+    
+    ROUND(COALESCE(AVG(a.preflop_score), AVG(CASE WHEN a.street='preflop' THEN a.j_score END)),1) AS avg_preflop_score,
+    ROUND(COALESCE(AVG(a.postflop_score), AVG(CASE WHEN a.street!='preflop' THEN a.j_score END)),1) AS avg_postflop_score,
+    
+    /* river calls */
+    COUNT(CASE WHEN a.street='river'
+                AND a.action_label='call' THEN 1 END)       AS river_calls,
+    COUNT(CASE WHEN a.street='river'
+                AND a.action_label='call'
+                AND p.money_won>0 THEN 1 END)               AS river_calls_won
+FROM   actions a
+LEFT JOIN players   p ON p.hand_id=a.hand_id AND p.position=a.position
+WHERE  a.player_id IS NOT NULL AND a.player_id!=''
+GROUP  BY a.player_id, a.nickname;
 """
 
 
@@ -107,20 +129,28 @@ WITH base AS (
         a.nickname,
         COUNT(DISTINCT a.hand_id)                           AS hands_played,
         ROUND(AVG(a.j_score),1)                             AS avg_j_score,
-        ROUND(AVG(CASE WHEN a.action!='f'
-                       AND a.street='preflop' THEN 1 END)*100,1)         AS vpip,
-        ROUND(AVG(CASE WHEN a.action='r'
-                       AND a.street='preflop' THEN 1 END)*100,1)         AS pfr,
-        ROUND(AVG(a.preflop_score),1)                       AS avg_preflop_score,
-        ROUND(AVG(a.postflop_score),1)                      AS avg_postflop_score,
+        
+        /* VPIP och PFR - räkna korrekt över alla preflop-actions */
+        ROUND(
+            SUM(CASE WHEN a.action!='f' AND a.street='preflop' THEN 1 ELSE 0 END) * 100.0 /
+            NULLIF(SUM(CASE WHEN a.street='preflop' THEN 1 ELSE 0 END), 0)
+        ,1) AS vpip,
+        
+        ROUND(
+            SUM(CASE WHEN a.action='r' AND a.street='preflop' THEN 1 ELSE 0 END) * 100.0 /
+            NULLIF(SUM(CASE WHEN a.street='preflop' THEN 1 ELSE 0 END), 0)
+        ,1) AS pfr,
+        
+        ROUND(COALESCE(AVG(a.preflop_score), AVG(CASE WHEN a.street='preflop' THEN a.j_score END)),1) AS avg_preflop_score,
+        ROUND(COALESCE(AVG(a.postflop_score), AVG(CASE WHEN a.street!='preflop' THEN a.j_score END)),1) AS avg_postflop_score,
 
         /* needed for win-rate */
         SUM(p.money_won)                                    AS total_winnings,
         AVG(h.big_blind)                                    AS avg_big_blind,
 
-        /* counts for solver precision */
-        COUNT(CASE WHEN a.solver_best IS NOT NULL THEN 1 END) AS solver_cnt,
-        COUNT(CASE WHEN a.solver_best = 'y' THEN 1 END)       AS solver_yes_cnt,
+        /* counts for solver precision - removed due to missing column */
+        0 AS solver_cnt,
+        0 AS solver_yes_cnt,
 
         /* counts for river calldown accuracy */
         COUNT(CASE WHEN a.street='river'
@@ -218,26 +248,61 @@ CREATE INDEX IF NOT EXISTS idx_actions_player_hand   ON actions(player_id, hand_
 
 def rebuild_tables(con: sqlite3.Connection) -> None:
     cur = con.cursor()
+    
+    try:
+        # Kontrollera att actions-tabellen finns och har data
+        count = cur.execute("SELECT COUNT(*) FROM actions").fetchone()[0]
+        log.info(f"Found {count} rows in actions table")
+        
+        # Kontrollera att de nya kolumnerna finns
+        cur.execute("PRAGMA table_info(actions)")
+        columns = {row[1] for row in cur.fetchall()}
+        
+        if 'preflop_score' not in columns or 'postflop_score' not in columns:
+            log.warning("Missing preflop_score or postflop_score columns in actions table")
+            log.warning("Script 7 might not have completed successfully")
+            # Fortsätt ändå för att skapa tabellerna med NULL-värden
+        
+    except Exception as e:
+        log.error(f"Error checking actions table: {e}")
+        raise
 
     # 1. dashboard_summary ---------------------------------------------------
-    cur.executescript("DROP TABLE IF EXISTS dashboard_summary;")
-    cur.execute(f"CREATE TABLE dashboard_summary AS {DASHBOARD_SQL}")
+    try:
+        cur.executescript("DROP TABLE IF EXISTS dashboard_summary;")
+        cur.execute(f"CREATE TABLE dashboard_summary AS {DASHBOARD_SQL}")
+        log.info("✅ dashboard_summary created")
+    except Exception as e:
+        log.error(f"Failed to create dashboard_summary: {e}")
+        raise
 
     # 2. top25_players -------------------------------------------------------
-    cur.executescript("DROP TABLE IF EXISTS top25_players;")
-    cur.execute(f"CREATE TABLE top25_players AS {TOP_PLAYERS_SQL_FMT.format(limit=25)}")
-    cur.execute("CREATE INDEX idx_top25_player_id ON top25_players(player_id);")
+    try:
+        cur.executescript("DROP TABLE IF EXISTS top25_players;")
+        cur.execute(f"CREATE TABLE top25_players AS {TOP_PLAYERS_SQL_FMT.format(limit=25)}")
+        cur.execute("CREATE INDEX idx_top25_player_id ON top25_players(player_id);")
+        log.info("✅ top25_players created")
+    except Exception as e:
+        log.error(f"Failed to create top25_players: {e}")
+        raise
 
     # 3. player_summary ------------------------------------------------------
-    cur.executescript("DROP TABLE IF EXISTS player_summary;")
-    cur.execute(f"CREATE TABLE player_summary AS {PLAYER_SUMMARY_SQL}")   # ← add CREATE TABLE
-    cur.execute("CREATE INDEX idx_ps_player_id ON player_summary(player_id);")
+    try:
+        cur.executescript("DROP TABLE IF EXISTS player_summary;")
+        cur.execute(f"CREATE TABLE player_summary AS {PLAYER_SUMMARY_SQL}")   # ← add CREATE TABLE
+        cur.execute("CREATE INDEX idx_ps_player_id ON player_summary(player_id);")
+        log.info("✅ player_summary created")
+    except Exception as e:
+        log.error(f"Failed to create player_summary: {e}")
+        raise
 
-    cur.executescript(DDL_INDEXES)
-
-    con.commit()
-
-    log.info("✅  Tables materialized.")
+    try:
+        cur.executescript(DDL_INDEXES)
+        con.commit()
+        log.info("✅ Tables materialized successfully.")
+    except Exception as e:
+        log.error(f"Failed to create indexes: {e}")
+        raise
 
 
 # ---------------------------------------------------------------------------
@@ -247,8 +312,12 @@ if __name__ == "__main__":
     parser.add_argument("--db", help="Path to heavy_analysis.db (defaults to utils.paths.HEAVY_DB)")
     args = parser.parse_args()
 
-    con = get_db(args.db)
     try:
+        con = get_db(args.db)
         rebuild_tables(con)
+    except Exception as e:
+        log.error(f"Script failed: {e}")
+        sys.exit(1)
     finally:
-        con.close()
+        if 'con' in locals():
+            con.close()

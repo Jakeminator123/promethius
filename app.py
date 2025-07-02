@@ -127,8 +127,33 @@ async def get_dashboard_data():
         }
     
     try:
-        # Get main stats from materialized table
-        summary = dash_summary_new()
+        # Check if materialized tables exist, if not create them
+        try:
+            summary = dash_summary_new()
+        except Exception as e:
+            if "no such table" in str(e) or "no such column" in str(e):
+                # Run script 8 to create materialized tables
+                log.info("Materialized tables missing, creating them now...")
+                import subprocess
+                import sys
+                from pathlib import Path
+                
+                script_path = Path(__file__).parent / "scrape_hh" / "scripts" / "8_materialise_dashboard.py"
+                if script_path.exists():
+                    result = subprocess.run([sys.executable, str(script_path)], 
+                                          capture_output=True, text=True)
+                    if result.returncode == 0:
+                        log.info("Materialized tables created successfully")
+                        # Try again
+                        summary = dash_summary_new()
+                    else:
+                        log.error(f"Failed to create materialized tables: {result.stderr}")
+                        raise
+                else:
+                    log.error(f"Script 8 not found at {script_path}")
+                    raise
+            else:
+                raise
         
         # Get top 25 players from materialized table
         top_players = top_players_new(25)
@@ -200,11 +225,7 @@ async def list_players(
 
     # map human-friendly field → real SQL expression
     if sort_by == "hands_played":
-        order_expr = "total_hands"                # real column
-    elif sort_by == "vpip":
-        order_expr = "ROUND(vpip_cnt*100.0/NULLIF(preflop_actions,0),1)"
-    elif sort_by == "pfr":
-        order_expr = "ROUND(pfr_cnt*100.0/NULLIF(preflop_actions,0),1)"
+        order_expr = "hands_played"               # real column name
     else:
         order_expr = sort_by                      # column exists as-is
 
@@ -212,11 +233,11 @@ async def list_players(
         SELECT
             player_id,
             nickname,
-            total_hands AS hands_played,          -- expose as friendly name
+            hands_played,
             total_actions,
             avg_j_score,
-            ROUND(vpip_cnt*100.0/NULLIF(preflop_actions,0),1) AS vpip,
-            ROUND(pfr_cnt*100.0/NULLIF(preflop_actions,0),1) AS pfr,
+            vpip,
+            pfr,
             avg_preflop_score,
             avg_postflop_score
         FROM player_summary
@@ -275,17 +296,14 @@ async def get_player_stats_endpoint(player_id: str):
     # 1) Try the materialized table first
     row = player_row_new(player_id)
     if row:
-        preflop_acts = row.get("preflop_actions", 0) or 0
-        vpip = round(row["vpip_cnt"] / preflop_acts * 100, 1) if preflop_acts else 0.0
-        pfr  = round(row["pfr_cnt"]  / preflop_acts * 100, 1) if preflop_acts else 0.0
         return {
             "player_id":          row["player_id"],
-            "nickname":           row["nickname"],
-            "hands_played":       row["total_hands"],
-            "total_actions":      row["total_actions"],
-            "avg_j_score":        round(row["avg_j_score"], 1) if row["avg_j_score"] is not None else 0.0,
-            "vpip":               vpip,
-            "pfr":                pfr,
+            "nickname":           row.get("nickname", ""),
+            "hands_played":       row.get("hands_played", 0),
+            "total_actions":      row.get("total_actions", 0),
+            "avg_j_score":        round(row["avg_j_score"], 1) if row.get("avg_j_score") is not None else 0.0,
+            "vpip":               row.get("vpip", 0.0),
+            "pfr":                row.get("pfr", 0.0),
             "avg_preflop_score":  row.get("avg_preflop_score"),
             "avg_postflop_score": row.get("avg_postflop_score"),
         }
