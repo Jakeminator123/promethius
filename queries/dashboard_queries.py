@@ -277,7 +277,7 @@ def dash_summary_new()      -> dict : return execute_query(
     "SELECT * FROM dashboard_summary LIMIT 1",             db_name='heavy_analysis.db')[0]
 
 def top_players_new(limit=25)-> list : return execute_query(
-        "SELECT * FROM top25_players ORDER BY hands_played DESC LIMIT ?",
+        "SELECT * FROM top25_players ORDER BY total_hands DESC LIMIT ?",
         (limit,),                                             db_name='heavy_analysis.db')
 
 def player_row_new(pid:str)  -> dict|None:
