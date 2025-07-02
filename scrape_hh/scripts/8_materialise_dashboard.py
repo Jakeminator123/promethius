@@ -99,20 +99,114 @@ GROUP BY a.player_id, a.nickname;
 
 
 TOP_PLAYERS_SQL_FMT = """
+WITH base AS (
+    SELECT
+        a.player_id,
+        a.nickname,
+        COUNT(DISTINCT a.hand_id)                           AS hands_played,
+        ROUND(AVG(a.j_score),1)                             AS avg_j_score,
+        ROUND(AVG(CASE WHEN a.action!='f'
+                       AND a.street='preflop' THEN 1 END)*100,1)         AS vpip,
+        ROUND(AVG(CASE WHEN a.action='r'
+                       AND a.street='preflop' THEN 1 END)*100,1)         AS pfr,
+        ROUND(AVG(a.preflop_score),1)                       AS avg_preflop_score,
+        ROUND(AVG(a.postflop_score),1)                      AS avg_postflop_score,
+
+        /* needed for win-rate */
+        SUM(p.money_won)                                    AS total_winnings,
+        AVG(h.big_blind)                                    AS avg_big_blind,
+
+        /* counts for solver precision */
+        COUNT(CASE WHEN a.solver_best IS NOT NULL THEN 1 END) AS solver_cnt,
+        COUNT(CASE WHEN a.solver_best = 'y' THEN 1 END)       AS solver_yes_cnt,
+
+        /* counts for river calldown accuracy */
+        COUNT(CASE WHEN a.street='river'
+                    AND a.action_label='call' THEN 1 END)       AS river_calls,
+        COUNT(CASE WHEN a.street='river'
+                    AND a.action_label='call'
+                    AND p.money_won>0 THEN 1 END)               AS river_calls_won
+    FROM   actions a
+    LEFT JOIN players   p ON p.hand_id=a.hand_id AND p.position=a.position
+    LEFT JOIN hand_info h ON h.hand_id=a.hand_id
+    WHERE  a.player_id IS NOT NULL AND a.player_id!=''
+    GROUP  BY a.player_id, a.nickname
+    HAVING COUNT(DISTINCT a.hand_id) > 10
+),
+
+/* average raise-size per street + label → for deviance calc */
+avg_sizes AS (
+    SELECT street, action_label, AVG(size_frac) AS avg_size
+    FROM   actions
+    WHERE  action='r' AND size_frac IS NOT NULL
+    GROUP  BY street, action_label
+),
+
+bet_dev AS (
+    SELECT
+        a.player_id,
+        ROUND(AVG(
+            ABS(a.size_frac - s.avg_size) / NULLIF(s.avg_size,0) * 100
+        ),0) AS bet_deviance
+    FROM   actions a
+    JOIN   avg_sizes s
+           ON s.street=a.street AND s.action_label=a.action_label
+    WHERE  a.action='r' AND a.size_frac IS NOT NULL
+    GROUP  BY a.player_id
+),
+
+tilt AS (
+    /* performance drop after a losing hand */
+    SELECT player_id,
+           ROUND(100 - (
+               AVG(CASE WHEN prev_money_won<0  THEN j_score END) /
+               NULLIF(AVG(CASE WHEN prev_money_won>=0 THEN j_score END),0)
+           )*100,0) AS tilt_factor
+    FROM (
+        SELECT a.player_id,
+               a.j_score,
+               LAG(p.money_won) OVER (PARTITION BY a.player_id ORDER BY a.hand_id)
+                   AS prev_money_won
+        FROM   actions a
+        JOIN   players p ON p.hand_id=a.hand_id AND p.position=a.position
+    )
+    GROUP BY player_id
+)
+
 SELECT
-    a.player_id,
-    a.nickname,
-    COUNT(DISTINCT a.hand_id)  AS hands_played,
-    ROUND(AVG(a.j_score), 1)   AS avg_j_score,
-    ROUND(AVG(CASE WHEN a.action!='f' AND a.street='preflop' THEN 1.0 ELSE 0 END)*100,1) AS vpip,
-    ROUND(AVG(CASE WHEN a.action='r'  AND a.street='preflop' THEN 1.0 ELSE 0 END)*100,1) AS pfr
-FROM   actions a
-WHERE  a.player_id IS NOT NULL AND a.player_id!=''
-GROUP  BY a.player_id, a.nickname
-HAVING hands_played > 10
-ORDER  BY hands_played DESC
-LIMIT  {limit}
+    b.player_id,
+    b.nickname,
+    /* alias so React expects player.total_hands */
+    b.hands_played                                   AS total_hands,
+    b.avg_j_score,
+    b.vpip,
+    b.pfr,
+    b.avg_preflop_score,
+    b.avg_postflop_score,
+
+    /* win-rate BB/100 */
+    ROUND(CASE WHEN b.avg_big_blind>0
+               THEN (b.total_winnings / b.avg_big_blind) /
+                    b.hands_played * 100
+          END, 2)                                    AS winrate_bb100,
+
+    /* optional dashboard columns */
+    ROUND(CASE WHEN b.solver_cnt>0
+               THEN b.solver_yes_cnt*100.0 / b.solver_cnt
+          END, 1)                                    AS solver_precision_score,
+    ROUND(CASE WHEN b.river_calls>0
+               THEN b.river_calls_won*100.0 / b.river_calls
+          END, 0)                                    AS calldown_accuracy,
+    d.bet_deviance,
+    t.tilt_factor
+
+FROM   base      b
+LEFT JOIN bet_dev d ON d.player_id = b.player_id
+LEFT JOIN tilt    t ON t.player_id = b.player_id
+ORDER  BY total_hands DESC
+LIMIT  {limit};
 """.strip()
+
 
 DDL_INDEXES = """
 CREATE INDEX IF NOT EXISTS idx_actions_player_street  ON actions(player_id, street);
