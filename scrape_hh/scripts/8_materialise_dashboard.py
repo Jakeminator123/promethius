@@ -43,8 +43,8 @@ SELECT
           NULLIF(SUM(CASE WHEN street='preflop' THEN 1 ELSE 0 END), 0), 1)  AS avg_pfr,
     AVG(j_score)                                    AS avg_j_score,
     COUNT(action_order)                             AS total_actions,
-    ROUND(COALESCE(AVG(preflop_score), AVG(CASE WHEN street='preflop' THEN j_score END)), 1)    AS avg_preflop_score,
-    ROUND(COALESCE(AVG(postflop_score), AVG(CASE WHEN street!='preflop' THEN j_score END)), 1)  AS avg_postflop_score
+    ROUND(AVG(preflop_score), 1)                    AS avg_preflop_score,
+    ROUND(AVG(postflop_score), 1)                   AS avg_postflop_score
 FROM actions
 WHERE player_id IS NOT NULL AND player_id!='';
 """
@@ -106,8 +106,8 @@ SELECT
         NULLIF(SUM(CASE WHEN a.street='preflop' THEN 1 ELSE 0 END), 0)
     ,1) AS pfr,
     
-    ROUND(COALESCE(AVG(a.preflop_score), AVG(CASE WHEN a.street='preflop' THEN a.j_score END)),1) AS avg_preflop_score,
-    ROUND(COALESCE(AVG(a.postflop_score), AVG(CASE WHEN a.street!='preflop' THEN a.j_score END)),1) AS avg_postflop_score,
+    ROUND(AVG(a.preflop_score),1) AS avg_preflop_score,
+    ROUND(AVG(a.postflop_score),1) AS avg_postflop_score,
     
     /* river calls */
     COUNT(CASE WHEN a.street='river'
@@ -141,8 +141,8 @@ WITH base AS (
             NULLIF(SUM(CASE WHEN a.street='preflop' THEN 1 ELSE 0 END), 0)
         ,1) AS pfr,
         
-        ROUND(COALESCE(AVG(a.preflop_score), AVG(CASE WHEN a.street='preflop' THEN a.j_score END)),1) AS avg_preflop_score,
-        ROUND(COALESCE(AVG(a.postflop_score), AVG(CASE WHEN a.street!='preflop' THEN a.j_score END)),1) AS avg_postflop_score,
+        ROUND(AVG(a.preflop_score),1) AS avg_preflop_score,
+        ROUND(AVG(a.postflop_score),1) AS avg_postflop_score,
 
         /* needed for win-rate */
         SUM(p.money_won)                                    AS total_winnings,

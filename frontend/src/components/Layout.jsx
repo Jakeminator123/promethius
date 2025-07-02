@@ -36,6 +36,12 @@ function Layout({ onLogout }) {
   const handleDrawerToggle = () => {
     setMobileOpen(!mobileOpen)
   }
+  
+  const handleDrawerClose = () => {
+    setMobileOpen(false)
+    // Move focus back to menu button when drawer closes
+    document.querySelector('[aria-label="open drawer"]')?.focus()
+  }
 
   const menuItems = [
     { text: 'Fraud Detection Dashboard', icon: <ShieldIcon />, path: '/' },
@@ -200,9 +206,10 @@ function Layout({ onLogout }) {
         <Drawer
           variant="temporary"
           open={mobileOpen}
-          onClose={handleDrawerToggle}
+          onClose={handleDrawerClose}
           ModalProps={{
             keepMounted: true,
+            disableRestoreFocus: true,
           }}
           sx={{
             display: { xs: 'block', sm: 'none' },
