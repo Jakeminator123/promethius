@@ -118,6 +118,8 @@ async def get_dashboard_data():
             "avg_vpip": 0,
             "avg_pfr": 0,
             "avg_j_score": 0,
+            "avg_preflop_score": 0,
+            "avg_postflop_score": 0,
             "total_actions": 0,
             "top_players": [],
             "database_status": "building",
@@ -125,10 +127,10 @@ async def get_dashboard_data():
         }
     
     try:
-        # Get main stats
+        # Get main stats from materialized table
         summary = dash_summary_new()
         
-        # Get top 25 players
+        # Get top 25 players from materialized table
         top_players = top_players_new(25)
         
         return {
@@ -137,6 +139,8 @@ async def get_dashboard_data():
             "avg_vpip": round(summary.get('avg_vpip', 0), 1),
             "avg_pfr": round(summary.get('avg_pfr', 0), 1),
             "avg_j_score": round(summary.get('avg_j_score', 0), 1),
+            "avg_preflop_score": round(summary.get('avg_preflop_score', 0), 1),
+            "avg_postflop_score": round(summary.get('avg_postflop_score', 0), 1),
             "total_actions": summary.get('total_actions', 0),
             "top_players": top_players,
             "database_status": "connected" if summary and top_players else "missing_data"
@@ -150,6 +154,8 @@ async def get_dashboard_data():
             "avg_vpip": 0,
             "avg_pfr": 0,
             "avg_j_score": 0,
+            "avg_preflop_score": 0,
+            "avg_postflop_score": 0,
             "total_actions": 0,
             "top_players": [],
             "database_status": "error",

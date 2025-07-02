@@ -111,7 +111,7 @@ function StatCard({ title, value, icon, color, delay = 0, prefix = '', suffix = 
                       end={numericValue} 
                       duration={2.5} 
                       separator="," 
-                      decimals={suffix === '%' ? 1 : 0}
+                      decimals={suffix === '%' || title.includes('Score') ? 1 : 0}
                     />
                     {suffix}
                   </>
@@ -207,7 +207,7 @@ const VirtualRow = ({ index, style, data }) => {
           )}
         </Box>
         
-        <Box flex="1 1 200px" sx={{ minWidth: 0 }}>
+        <Box flex="1 1 150px" sx={{ minWidth: 0 }}>
           <Typography 
             variant="body2" 
             sx={{ 
@@ -228,7 +228,7 @@ const VirtualRow = ({ index, style, data }) => {
           </Typography>
         </Box>
         
-        <Box flex="0 0 120px" sx={{ textAlign: 'right' }}>
+        <Box flex="0 0 100px" sx={{ textAlign: 'right' }}>
           <Chip 
             label={`${(player.winrate_bb100 || 0).toFixed(2)} BB/100`}
             size="small"
@@ -249,7 +249,7 @@ const VirtualRow = ({ index, style, data }) => {
           <Typography variant="body2">{(player.pfr || 0).toFixed(1)}%</Typography>
         </Box>
         
-        <Box flex="0 0 100px" sx={{ textAlign: 'right' }}>
+        <Box flex="0 0 80px" sx={{ textAlign: 'right' }}>
           <Chip 
             label={player.avg_j_score?.toFixed(1) || '-'}
             size="small"
@@ -262,7 +262,33 @@ const VirtualRow = ({ index, style, data }) => {
           />
         </Box>
         
-        <Box flex="0 0 100px" sx={{ textAlign: 'center' }}>
+        <Box flex="0 0 80px" sx={{ textAlign: 'center' }}>
+          <Chip 
+            label={(player.avg_preflop_score || 0).toFixed(1)}
+            size="small"
+            sx={{
+              backgroundColor: alpha('#a55eea', 0.2),
+              color: '#a55eea',
+              border: '1px solid #a55eea',
+              fontWeight: 600
+            }}
+          />
+        </Box>
+        
+        <Box flex="0 0 80px" sx={{ textAlign: 'center' }}>
+          <Chip 
+            label={(player.avg_postflop_score || 0).toFixed(1)}
+            size="small"
+            sx={{
+              backgroundColor: alpha('#45aaf2', 0.2),
+              color: '#45aaf2',
+              border: '1px solid #45aaf2',
+              fontWeight: 600
+            }}
+          />
+        </Box>
+        
+        <Box flex="0 0 80px" sx={{ textAlign: 'right' }}>
           <Chip
             icon={
               riskLevel === 'high' ? <WarningIcon sx={{ fontSize: 16 }} /> :
@@ -419,6 +445,26 @@ function Dashboard() {
             danger={true}
           />
         </Grid>
+        <Grid item xs={12} sm={6} md={6}>
+          <StatCard
+            title="Avg Preflop Score"
+            value={stats?.avg_preflop_score || 0}
+            icon={<TrendingUpIcon sx={{ fontSize: 40 }} />}
+            color="#a55eea"
+            delay={0.3}
+            suffix=""
+          />
+        </Grid>
+        <Grid item xs={12} sm={6} md={6}>
+          <StatCard
+            title="Avg Postflop Score"
+            value={stats?.avg_postflop_score || 0}
+            icon={<TrendingUpIcon sx={{ fontSize: 40 }} />}
+            color="#45aaf2"
+            delay={0.4}
+            suffix=""
+          />
+        </Grid>
       </Grid>
 
       <Grid container spacing={3} sx={{ mt: 3 }}>
@@ -471,7 +517,7 @@ function Dashboard() {
                 }}
               >
                 <Box flex="0 0 40px" sx={{ mr: 2 }} />
-                <Box flex="1 1 200px">
+                <Box flex="1 1 150px">
                   <Typography variant="caption" sx={{ fontWeight: 600, color: '#00d4ff' }}>
                     PLAYER
                   </Typography>
@@ -481,7 +527,7 @@ function Dashboard() {
                     HANDS
                   </Typography>
                 </Box>
-                <Box flex="0 0 120px" sx={{ textAlign: 'right' }}>
+                <Box flex="0 0 100px" sx={{ textAlign: 'right' }}>
                   <Typography variant="caption" sx={{ fontWeight: 600, color: '#00d4ff' }}>
                     WIN RATE
                   </Typography>
@@ -496,12 +542,22 @@ function Dashboard() {
                     PFR
                   </Typography>
                 </Box>
-                <Box flex="0 0 100px" sx={{ textAlign: 'right' }}>
+                <Box flex="0 0 80px" sx={{ textAlign: 'right' }}>
                   <Typography variant="caption" sx={{ fontWeight: 600, color: '#00d4ff' }}>
                     J-SCORE
                   </Typography>
                 </Box>
-                <Box flex="0 0 100px" sx={{ textAlign: 'center' }}>
+                <Box flex="0 0 80px" sx={{ textAlign: 'center' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#00d4ff' }}>
+                    PREFLOP
+                  </Typography>
+                </Box>
+                <Box flex="0 0 80px" sx={{ textAlign: 'center' }}>
+                  <Typography variant="caption" sx={{ fontWeight: 600, color: '#00d4ff' }}>
+                    POSTFLOP
+                  </Typography>
+                </Box>
+                <Box flex="0 0 80px" sx={{ textAlign: 'right' }}>
                   <Typography variant="caption" sx={{ fontWeight: 600, color: '#00d4ff' }}>
                     RISK LEVEL
                   </Typography>

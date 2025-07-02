@@ -40,9 +40,7 @@ SELECT
     AVG(CASE WHEN action!='f' AND street='preflop' THEN 1 ELSE 0 END)*100  AS avg_vpip,
     AVG(CASE WHEN action='r'  AND street='preflop' THEN 1 ELSE 0 END)*100  AS avg_pfr,
     AVG(j_score)                                    AS avg_j_score,
-    COUNT(action_order)                             AS total_actions,
-    ROUND(AVG(preflop_score), 1)                    AS avg_preflop_score,
-    ROUND(AVG(postflop_score), 1)                   AS avg_postflop_score
+    COUNT(action_order)                             AS total_actions
 FROM actions
 WHERE player_id IS NOT NULL AND player_id!='';
 """
