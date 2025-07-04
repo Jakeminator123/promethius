@@ -1,0 +1,18 @@
+services:
+  - type: web
+    name: promethius
+    runtime: python
+    plan: X
+    buildCommand: npm install --prefix frontend && npm run build --prefix frontend
+    startCommand: python main.py
+    envVars:
+      - key: RENDER
+        value: true
+      - key: BATTLE_API_USERNAME
+        sync: false
+      - key: BATTLE_API_PASSWORD
+        sync: false
+    disk:
+      name: prom-data
+      mountPath: /var/data
+      sizeGB: 5

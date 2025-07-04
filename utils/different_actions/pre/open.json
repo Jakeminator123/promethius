@@ -1,0 +1,49 @@
+{
+  "sizing_ranges": {
+    "tiny": [
+      0.0,
+      0.2
+    ],
+    "small": [
+      0.2,
+      0.35
+    ],
+    "medium": [
+      0.35,
+      0.55
+    ],
+    "big": [
+      0.55,
+      0.85
+    ],
+    "pot": [
+      0.85,
+      1.1
+    ],
+    "over": [
+      1.1,
+      1.75
+    ],
+    "huge": [
+      1.75,
+      999.0
+    ]
+  },
+  "strength_mappings": {
+    "low": {
+      "small": "steal-attempt",
+      "medium": "light-open",
+      "large": "wide-open"
+    },
+    "medium": {
+      "small": "standard-open",
+      "medium": "value-open",
+      "large": "strong-open"
+    },
+    "high": {
+      "small": "premium-open",
+      "medium": "value-open",
+      "large": "premium-open"
+    }
+  }
+} 

@@ -1,0 +1,2 @@
+Requirement already satisfied: aiosqlite in c:\program files\python312\lib\site-packages (0.21.0)
+Requirement already satisfied: typing_extensions>=4.0 in c:\program files\python312\lib\site-packages (from aiosqlite) (4.12.2)
